@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GEARHEAD — AI Diagnostics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Chivo:wght@300;400;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="grain"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">⛭</span>
+      <span class="brand-name">GEAR<span class="hot">HEAD</span></span>
+      <span class="brand-sub">AI&nbsp;DIAGNOSTICS</span>
+    </div>
+    <div class="car-select">
+      <label>VEHICLE</label>
+      <select id="carSelect"></select>
+    </div>
+  </header>
+
+  <main>
+    <!-- SCREEN 1 — IGNITION -->
+    <section id="screen-start" class="screen active">
+      <div class="ignition">
+        <h1 class="headline">What's the <span class="hot">car</span> doing?</h1>
+        <p class="tagline">Describe the symptom in plain words, or punch in a fault code. I'll walk you through it like a mechanic — straight from the workshop manual.</p>
+
+        <textarea id="problemInput" rows="3" placeholder="e.g. shudders through the wheel when I brake at highway speed and pulls slightly left"></textarea>
+
+        <div class="code-row">
+          <span class="code-label">OBD&nbsp;CODE</span>
+          <input id="codeInput" type="text" maxlength="6" placeholder="P0301" />
+          <span class="code-hint">optional</span>
+        </div>
+
+        <button id="diagnoseBtn" class="ignition-btn">
+          <span class="ring"></span>
+          <span class="btn-text">DIAGNOSE</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- SCREEN 2 — INTERVIEW -->
+    <section id="screen-interview" class="screen">
+      <div class="cockpit">
+        <div class="gauge-wrap">
+          <div id="gauge"></div>
+          <div class="gauge-caption">DIAGNOSTIC CONFIDENCE</div>
+        </div>
+        <div class="chat-wrap">
+          <div id="chatLog" class="chat-log"></div>
+          <div class="answer-row">
+            <input id="answerInput" type="text" placeholder="Type your answer…" autocomplete="off" />
+            <button id="answerBtn" class="send-btn">SEND ▸</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCREEN 3 — THE FIX -->
+    <section id="screen-fix" class="screen">
+      <div class="fix-layout">
+        <div class="fix-main">
+          <div class="fix-head">
+            <span class="status-dot"></span>
+            <h2 id="fixTitle">LIKELY FIX</h2>
+          </div>
+          <div id="fixBody" class="fix-body"></div>
+          <div id="sources" class="sources"></div>
+          <div class="safety">⚠️ Always verify with a qualified professional before relying on this.</div>
+          <button id="resetBtn" class="reset-btn">◂ NEW DIAGNOSIS</button>
+        </div>
+        <aside class="fix-side">
+          <div class="gauge-wrap small">
+            <div id="gaugeFix"></div>
+            <div class="gauge-caption">CONFIDENCE</div>
+          </div>
+          <div class="diagram-card">
+            <div class="diagram-head">MANUAL DIAGRAM <span class="diagram-hint">· click to enlarge ⤢</span></div>
+            <div id="diagram" class="diagram"></div>
+            <div id="diagramCaption" class="diagram-caption"></div>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <div id="lightbox" class="lightbox">
+    <span class="lb-close">✕ CLOSE</span>
+    <img id="lbImg" src="" alt="manual page (full size)" />
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

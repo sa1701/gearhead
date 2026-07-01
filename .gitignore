@@ -1,0 +1,22 @@
+# Secrets — NEVER commit these
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Local data
+chroma_db/
+*.log
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Keep manuals + anything derived from them out of git (copyright) — regenerable, stay local only
+manuals/
+page_images/
+fixes/

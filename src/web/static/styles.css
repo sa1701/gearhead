@@ -1,0 +1,216 @@
+/* ===== GEARHEAD — night cockpit / instrument-cluster aesthetic ===== */
+:root {
+  --bg:        #0a0c0f;
+  --bg-2:      #11151b;
+  --panel:     #161b22;
+  --panel-2:   #1c2530;
+  --line:      #2a323d;
+  --ink:       #e8edf2;
+  --ink-dim:   #8b97a6;
+  --amber:     #ffb01f;   /* warning-light amber — hero accent */
+  --amber-soft:#ffcf6b;
+  --red:       #ff3b30;   /* redline / alerts */
+  --green:     #34d058;   /* high confidence */
+  --carbon:    #0d1117;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background:
+    radial-gradient(1200px 600px at 50% -10%, #1a222c 0%, transparent 60%),
+    radial-gradient(900px 500px at 50% 120%, #14110a 0%, transparent 55%),
+    var(--bg);
+  color: var(--ink);
+  font-family: "Chivo", sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* fine carbon grid + grain overlay for depth */
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
+  background-size: 34px 34px;
+}
+.grain {
+  position: fixed; inset: 0; pointer-events: none; z-index: 1; opacity: .05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+main, .topbar { position: relative; z-index: 2; }
+
+/* ===== Top bar ===== */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 30px; border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(20,26,33,.7), transparent);
+}
+.brand { display: flex; align-items: baseline; gap: 12px; }
+.brand-mark { color: var(--amber); font-size: 26px; transform: translateY(3px); animation: spin 14s linear infinite; }
+@keyframes spin { to { transform: translateY(3px) rotate(360deg); } }
+.brand-name {
+  font-family: "Rajdhani", sans-serif; font-weight: 700; font-size: 28px;
+  letter-spacing: 3px; color: var(--ink);
+}
+.hot { color: var(--amber); }
+.brand-sub {
+  font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: 3px;
+  color: var(--ink-dim); border: 1px solid var(--line); padding: 3px 7px; border-radius: 3px;
+}
+.car-select { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.car-select label { font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: 2px; color: var(--ink-dim); }
+.car-select select {
+  background: var(--panel); color: var(--ink); border: 1px solid var(--line);
+  border-radius: 6px; padding: 7px 12px; font-family: "Rajdhani", sans-serif;
+  font-weight: 600; letter-spacing: .5px; cursor: pointer;
+}
+
+/* ===== Screens ===== */
+.screen { display: none; padding: 48px 30px 60px; max-width: 1120px; margin: 0 auto; animation: fade .5s ease; }
+.screen.active { display: block; }
+@keyframes fade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+/* ===== Screen 1 — ignition ===== */
+.ignition { max-width: 680px; margin: 6vh auto 0; text-align: center; }
+.headline {
+  font-family: "Rajdhani", sans-serif; font-weight: 700; font-size: clamp(38px, 6vw, 64px);
+  letter-spacing: 1px; line-height: 1; text-transform: uppercase;
+}
+.tagline { color: var(--ink-dim); margin: 18px auto 34px; max-width: 520px; line-height: 1.55; font-weight: 300; }
+#problemInput {
+  width: 100%; background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+  color: var(--ink); padding: 18px 20px; font-family: "Chivo", sans-serif; font-size: 16px;
+  resize: vertical; transition: border-color .2s, box-shadow .2s;
+}
+#problemInput:focus { outline: none; border-color: var(--amber); box-shadow: 0 0 0 3px rgba(255,176,31,.12); }
+#problemInput::placeholder { color: #5e6b7a; }
+
+.code-row { display: flex; align-items: center; gap: 12px; margin: 18px 0 36px; justify-content: center; }
+.code-label { font-family: "JetBrains Mono", monospace; font-size: 11px; letter-spacing: 2px; color: var(--ink-dim); }
+#codeInput {
+  width: 110px; text-align: center; background: var(--carbon); border: 1px solid var(--line);
+  border-radius: 6px; color: var(--amber); padding: 9px; font-family: "JetBrains Mono", monospace;
+  font-size: 16px; letter-spacing: 2px; text-transform: uppercase;
+}
+#codeInput:focus { outline: none; border-color: var(--amber); }
+.code-hint { font-size: 12px; color: #5e6b7a; font-style: italic; }
+
+/* ignition / start button */
+.ignition-btn {
+  position: relative; width: 168px; height: 168px; border-radius: 50%; cursor: pointer;
+  background: radial-gradient(circle at 50% 35%, #20272f, #0d1117);
+  border: 2px solid var(--line); color: var(--ink);
+  font-family: "Rajdhani", sans-serif; font-weight: 700; font-size: 22px; letter-spacing: 3px;
+  transition: transform .15s, border-color .25s, box-shadow .25s;
+}
+.ignition-btn .ring {
+  position: absolute; inset: 14px; border-radius: 50%; border: 2px dashed rgba(255,176,31,.35);
+  animation: spin 22s linear infinite;
+}
+.ignition-btn:hover { border-color: var(--amber); box-shadow: 0 0 36px rgba(255,176,31,.28); transform: scale(1.03); }
+.ignition-btn:active { transform: scale(.97); }
+.ignition-btn.busy { pointer-events: none; border-color: var(--amber); }
+.ignition-btn.busy .btn-text { animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .35; } }
+
+/* ===== Screen 2 — cockpit / interview ===== */
+.cockpit { display: grid; grid-template-columns: 300px 1fr; gap: 28px; align-items: start; }
+.gauge-wrap { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 22px; text-align: center; }
+.gauge-wrap.small { padding: 16px; }
+.gauge-caption { font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: 3px; color: var(--ink-dim); margin-top: 8px; }
+
+.chat-wrap { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 22px; display: flex; flex-direction: column; min-height: 440px; }
+.chat-log { flex: 1; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; max-height: 52vh; padding-right: 6px; }
+.bubble { max-width: 82%; padding: 13px 16px; border-radius: 14px; line-height: 1.5; animation: fade .3s ease; }
+.bubble.bot {
+  align-self: flex-start; background: var(--panel-2); border: 1px solid var(--line);
+  border-left: 3px solid var(--amber);
+}
+.bubble.bot .who { font-family: "Rajdhani", sans-serif; font-weight: 700; letter-spacing: 1px; color: var(--amber); font-size: 13px; display: block; margin-bottom: 3px; }
+.bubble.user { align-self: flex-end; background: #223040; border: 1px solid #2f4256; }
+.bubble.thinking { color: var(--ink-dim); font-style: italic; }
+.bubble.thinking::after { content: "▍"; animation: pulse 1s steps(2) infinite; }
+
+.answer-row { display: flex; gap: 10px; margin-top: 16px; }
+#answerInput { flex: 1; background: var(--carbon); border: 1px solid var(--line); border-radius: 10px; color: var(--ink); padding: 13px 16px; font-family: "Chivo", sans-serif; font-size: 15px; }
+#answerInput:focus { outline: none; border-color: var(--amber); }
+.send-btn, .reset-btn {
+  background: var(--amber); color: #1a1205; border: none; border-radius: 10px; cursor: pointer;
+  font-family: "Rajdhani", sans-serif; font-weight: 700; letter-spacing: 1.5px; padding: 0 20px;
+  transition: filter .2s, transform .1s;
+}
+.send-btn:hover, .reset-btn:hover { filter: brightness(1.1); }
+.send-btn:active { transform: scale(.96); }
+
+/* ===== Screen 3 — the fix ===== */
+.fix-layout { display: grid; grid-template-columns: 1fr 340px; gap: 28px; align-items: start; }
+.fix-main { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 28px 30px; }
+.fix-head { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+.status-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--green); box-shadow: 0 0 12px var(--green); }
+#fixTitle { font-family: "Rajdhani", sans-serif; font-weight: 700; letter-spacing: 2px; font-size: 24px; }
+
+.fix-body { line-height: 1.65; }
+.fix-body h3 { font-family: "Rajdhani", sans-serif; letter-spacing: 1px; color: var(--amber-soft); margin: 20px 0 8px; font-size: 18px; }
+.fix-body p { margin: 10px 0; }
+.fix-body ol, .fix-body ul { margin: 10px 0 10px 22px; }
+.fix-body li { margin: 6px 0; }
+.fix-body strong { color: #fff; }
+.cite {
+  font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--amber);
+  background: rgba(255,176,31,.1); border: 1px solid rgba(255,176,31,.25);
+  padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+}
+
+.sources { display: flex; flex-wrap: wrap; gap: 8px; margin: 24px 0 18px; }
+.chip {
+  font-family: "JetBrains Mono", monospace; font-size: 11px; letter-spacing: .5px;
+  background: var(--carbon); border: 1px solid var(--line); color: var(--ink-dim);
+  padding: 5px 10px; border-radius: 20px;
+}
+.safety {
+  background: rgba(255,59,48,.08); border: 1px solid rgba(255,59,48,.3); color: var(--amber-soft);
+  border-radius: 10px; padding: 12px 16px; font-size: 14px; margin-bottom: 22px;
+}
+.reset-btn { background: transparent; border: 1px solid var(--line); color: var(--ink); padding: 11px 18px; }
+.reset-btn:hover { border-color: var(--amber); color: var(--amber); filter: none; }
+
+.fix-side { display: flex; flex-direction: column; gap: 22px; }
+.diagram-card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px; }
+.diagram-head { font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: 3px; color: var(--ink-dim); margin-bottom: 12px; }
+.diagram { background: var(--carbon); border-radius: 8px; min-height: 120px; display: flex; flex-direction: column; gap: 10px; }
+.diagram img { width: 100%; height: auto; display: block; border-radius: 4px; background: #fff; cursor: zoom-in; transition: filter .15s, transform .15s; }
+.diagram img:hover { filter: brightness(1.05); transform: scale(1.01); }
+.diagram .loading { color: #888; font-size: 13px; padding: 30px; text-align: center; font-family: "JetBrains Mono", monospace; }
+.diagram-hint { font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: 1px; color: var(--ink-dim); }
+
+/* full-screen zoom (lightbox) */
+.lightbox {
+  position: fixed; inset: 0; z-index: 60; display: none;
+  align-items: center; justify-content: center; padding: 30px;
+  background: rgba(5, 7, 10, .94); backdrop-filter: blur(4px); cursor: zoom-out;
+  overflow: auto;
+}
+.lightbox.open { display: flex; }
+.lightbox img {
+  max-width: 96vw; max-height: 90vh; object-fit: contain; background: #fff;
+  border-radius: 6px; box-shadow: 0 24px 70px rgba(0, 0, 0, .7);
+}
+.lb-close {
+  position: fixed; top: 22px; right: 28px; font-family: "Rajdhani", sans-serif;
+  font-weight: 700; letter-spacing: 2px; color: var(--ink); border: 1px solid var(--line);
+  background: var(--panel); padding: 9px 16px; border-radius: 8px; cursor: pointer; z-index: 61;
+}
+.lb-close:hover { border-color: var(--amber); color: var(--amber); }
+.diagram-caption { color: var(--ink-dim); font-size: 13px; line-height: 1.5; margin-top: 12px; }
+.diagram-caption strong { color: var(--amber-soft); }
+
+/* gauge svg internals */
+.gauge-readout { font-family: "Rajdhani", sans-serif; font-weight: 700; }
+
+@media (max-width: 880px) {
+  .cockpit, .fix-layout { grid-template-columns: 1fr; }
+  .topbar { flex-direction: column; gap: 14px; align-items: flex-start; }
+}
