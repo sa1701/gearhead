@@ -116,7 +116,7 @@ def build_fixdb(subdir: str = "nissan-patrol-y61", limit_batches: int | None = N
     Checkpoints after EVERY batch (fixes/<subdir>.progress.json), so a crash or
     an empty credit balance never loses paid work — just re-run to resume.
     """
-    from ..ai.claude_provider import ClaudeProvider
+    from ..ai import get_provider
 
     records = _page_records(subdir)
     batches = _batches(records)
@@ -137,7 +137,7 @@ def build_fixdb(subdir: str = "nissan-patrol-y61", limit_batches: int | None = N
 
     # Extraction is mechanical chart-to-JSON work — Haiku does it at 1/5th the
     # price. The diagnosis brain stays on the main (Opus) model untouched.
-    brain = ClaudeProvider(model=settings.extract_model)
+    brain = get_provider(model=settings.extract_model)
     for i, batch in enumerate(batches, 1):
         key = f"{batch[0]['section_code']}:{batch[0]['page']}-{batch[-1]['page']}"
         if key in done:

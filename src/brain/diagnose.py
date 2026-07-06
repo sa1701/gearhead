@@ -5,7 +5,8 @@ answers using ONLY those pages and cites them. No interview loop yet (Step 3).
 """
 from __future__ import annotations
 
-from ..ai.claude_provider import ClaudeProvider
+from ..ai import get_provider
+from ..ai.provider import AIProvider
 from ..library.fixdb import search_fixes
 from ..library.search import search
 
@@ -72,8 +73,8 @@ def build_context(problem: str, car: str, hits: list[dict]) -> str:
     return f"{block}\n\n=====\n\nRAW MANUAL EXCERPTS:\n\n{excerpts}"
 
 
-def _expand_queries(problem: str, brain: ClaudeProvider) -> list[str]:
-    """Ask Claude to rewrite a messy symptom into good manual search phrases."""
+def _expand_queries(problem: str, brain: AIProvider) -> list[str]:
+    """Ask the brain to rewrite a messy symptom into good manual search phrases."""
     out = brain.complete(
         system=_QUERY_SYSTEM,
         messages=[{"role": "user", "content": problem}],
@@ -83,7 +84,7 @@ def _expand_queries(problem: str, brain: ClaudeProvider) -> list[str]:
     return [problem] + phrases[:5]  # keep the raw problem too, as a fallback
 
 
-def _retrieve(problem: str, car: str, brain: ClaudeProvider,
+def _retrieve(problem: str, car: str, brain: AIProvider,
               per_query: int = 4, final: int = 6) -> tuple[list[dict], list[str]]:
     """Multi-query search: expand the problem, search each, merge the best hits."""
     queries = _expand_queries(problem, brain)
@@ -103,7 +104,7 @@ def diagnose_once(
     max_tokens: int = 1500,
 ) -> dict:
     """One-shot grounded diagnosis. Returns {'answer', 'sources', 'queries'}."""
-    brain = ClaudeProvider()
+    brain = get_provider()
     hits, queries = _retrieve(problem, car, brain)
     user = (
         f"CAR: {car}\n"

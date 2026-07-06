@@ -52,6 +52,14 @@ def cars():
     return CARS
 
 
+@app.get("/api/status")
+def status():
+    """Which brain is loaded — the UI shows this as the 'engine' badge."""
+    provider = settings.resolved_provider()
+    model = settings.ollama_model if provider == "ollama" else settings.model
+    return {"provider": provider, "model": model, "local": provider == "ollama"}
+
+
 @app.post("/api/start")
 def start(req: StartReq):
     if not req.problem.strip():
@@ -61,6 +69,7 @@ def start(req: StartReq):
     SESSIONS[sid] = session
     step = session.start()
     step["session_id"] = sid
+    step["sections"] = len(session.sources())  # for the SOURCES mini-readout
     return step
 
 

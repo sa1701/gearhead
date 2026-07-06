@@ -8,6 +8,8 @@ from .provider import AIProvider
 
 
 class ClaudeProvider(AIProvider):
+    supports_vision = True
+
     def __init__(self, model: str | None = None) -> None:
         settings.check()
         self.client = anthropic.Anthropic(api_key=settings.anthropic_api_key)

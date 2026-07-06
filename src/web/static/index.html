@@ -18,9 +18,15 @@
       <span class="brand-name">GEAR<span class="hot">HEAD</span></span>
       <span class="brand-sub">AI&nbsp;DIAGNOSTICS</span>
     </div>
-    <div class="car-select">
-      <label>VEHICLE</label>
-      <select id="carSelect"></select>
+    <div class="topbar-right">
+      <div class="engine-badge" id="engineBadge" title="The model doing the diagnosing">
+        <span class="led led-green"></span>
+        <span id="engineText">ENGINE&nbsp;—</span>
+      </div>
+      <div class="car-select">
+        <label for="carSelect">VEHICLE</label>
+        <select id="carSelect"></select>
+      </div>
     </div>
   </header>
 
@@ -28,10 +34,20 @@
     <!-- SCREEN 1 — IGNITION -->
     <section id="screen-start" class="screen active">
       <div class="ignition">
+        <div class="warn-strip" aria-hidden="true">
+          <span class="wl">🔋</span><span class="wl">🌡️</span><span class="wl lit">⚠️</span><span class="wl">🛢️</span><span class="wl">🔧</span>
+        </div>
         <h1 class="headline">What's the <span class="hot">car</span> doing?</h1>
-        <p class="tagline">Describe the symptom in plain words, or punch in a fault code. I'll walk you through it like a mechanic — straight from the workshop manual.</p>
+        <p class="tagline">Describe the symptom in plain words, or punch in a fault code. GEARHEAD interviews you like a mechanic — and every fix is cited to the workshop manual.</p>
 
         <textarea id="problemInput" rows="3" placeholder="e.g. shudders through the wheel when I brake at highway speed and pulls slightly left"></textarea>
+
+        <div class="preset-row" id="presetRow">
+          <button class="preset" data-fill="Steering wheel shudders when braking from highway speed">Brake shudder</button>
+          <button class="preset" data-fill="Engine cranks but won't start on cold mornings">Won't start cold</button>
+          <button class="preset" data-fill="Temperature gauge climbs to hot in traffic and coolant smell">Overheating</button>
+          <button class="preset" data-code="P0301">Code P0301</button>
+        </div>
 
         <div class="code-row">
           <span class="code-label">OBD&nbsp;CODE</span>
@@ -39,9 +55,13 @@
           <span class="code-hint">optional</span>
         </div>
 
-        <button id="diagnoseBtn" class="ignition-btn">
+        <button id="diagnoseBtn" class="ignition-btn" aria-label="Start diagnosis">
           <span class="ring"></span>
-          <span class="btn-text">DIAGNOSE</span>
+          <span class="ring ring-2"></span>
+          <span class="btn-inner">
+            <span class="btn-text">ENGINE<br/>START</span>
+            <span class="btn-sub">PUSH&nbsp;TO&nbsp;DIAGNOSE</span>
+          </span>
         </button>
       </div>
     </section>
@@ -49,15 +69,36 @@
     <!-- SCREEN 2 — INTERVIEW -->
     <section id="screen-interview" class="screen">
       <div class="cockpit">
-        <div class="gauge-wrap">
-          <div id="gauge"></div>
-          <div class="gauge-caption">DIAGNOSTIC CONFIDENCE</div>
+        <div class="cluster">
+          <div class="gauge-wrap">
+            <div id="gauge"></div>
+            <div class="gauge-caption">DIAGNOSTIC&nbsp;CONFIDENCE</div>
+          </div>
+          <div class="mini-row">
+            <div class="mini">
+              <div class="mini-num" id="miniQuestions">0</div>
+              <div class="mini-label">QUESTIONS</div>
+            </div>
+            <div class="mini">
+              <div class="mini-num" id="miniSources">—</div>
+              <div class="mini-label">MANUAL&nbsp;PAGES</div>
+            </div>
+          </div>
+          <div class="idiot-lights">
+            <span class="led led-green"></span><span class="il-label">LIBRARY</span>
+            <span class="led led-amber blink" id="ledScan"></span><span class="il-label">SCAN</span>
+          </div>
         </div>
         <div class="chat-wrap">
+          <div class="console-head">
+            <span class="rec-dot"></span>
+            <span>DIAGNOSTIC&nbsp;CONSOLE</span>
+            <span class="console-live">LIVE</span>
+          </div>
           <div id="chatLog" class="chat-log"></div>
           <div class="answer-row">
             <input id="answerInput" type="text" placeholder="Type your answer…" autocomplete="off" />
-            <button id="answerBtn" class="send-btn">SEND ▸</button>
+            <button id="answerBtn" class="send-btn">SEND&nbsp;▸</button>
           </div>
         </div>
       </div>
@@ -69,12 +110,13 @@
         <div class="fix-main">
           <div class="fix-head">
             <span class="status-dot"></span>
-            <h2 id="fixTitle">LIKELY FIX</h2>
+            <h2 id="fixTitle">WORK&nbsp;ORDER</h2>
+            <span class="wo-meta" id="woMeta"></span>
           </div>
           <div id="fixBody" class="fix-body"></div>
           <div id="sources" class="sources"></div>
-          <div class="safety">⚠️ Always verify with a qualified professional before relying on this.</div>
-          <button id="resetBtn" class="reset-btn">◂ NEW DIAGNOSIS</button>
+          <div class="safety"><span class="hazard" aria-hidden="true"></span>⚠️ Always verify with a qualified professional before relying on this.</div>
+          <button id="resetBtn" class="reset-btn">◂ NEW&nbsp;DIAGNOSIS</button>
         </div>
         <aside class="fix-side">
           <div class="gauge-wrap small">
@@ -82,7 +124,7 @@
             <div class="gauge-caption">CONFIDENCE</div>
           </div>
           <div class="diagram-card">
-            <div class="diagram-head">MANUAL DIAGRAM <span class="diagram-hint">· click to enlarge ⤢</span></div>
+            <div class="diagram-head">MANUAL&nbsp;DIAGRAM <span class="diagram-hint">· click to enlarge ⤢</span></div>
             <div id="diagram" class="diagram"></div>
             <div id="diagramCaption" class="diagram-caption"></div>
           </div>

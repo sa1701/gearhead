@@ -7,7 +7,7 @@ import base64
 
 import fitz  # PyMuPDF
 
-from ..ai.claude_provider import ClaudeProvider
+from ..ai import get_provider
 from ..config import settings
 
 
@@ -49,6 +49,18 @@ def illustrate(problem: str, hits: list[dict], subdir: str, max_images: int = 2)
 
     images = [render_page(subdir, sf, pg) for sf, pg in seen]
 
+    brain = get_provider()
+    if not getattr(brain, "supports_vision", True):
+        # Text-only brain (Ollama): still show the real manual pages, but caption
+        # them from chunk metadata instead of having a model read the diagram.
+        sections = {(h["source_file"], h["page"]): h["section"] for h in hits}
+        captions = "\n".join(
+            f"Page {i}: {sections.get((sf, pg), 'Manual')} — {sf} p.{pg}, "
+            "the manual page this fix cites."
+            for i, (sf, pg) in enumerate(seen, 1)
+        )
+        return {"images": images, "captions": captions}
+
     content: list[dict] = [
         {
             "type": "text",
@@ -63,7 +75,6 @@ def illustrate(problem: str, hits: list[dict], subdir: str, max_images: int = 2)
     ]
     content += [_image_block(p) for p in images]
 
-    brain = ClaudeProvider()
     captions = brain.complete(
         system="You are GEARHEAD. Describe workshop-manual diagram pages briefly and practically.",
         messages=[{"role": "user", "content": content}],

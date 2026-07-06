@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Callable
 
-from ..ai.claude_provider import ClaudeProvider
+from ..ai import get_provider
 from .diagnose import _retrieve, build_context
 
 INTERVIEW_SYSTEM = """You are GEARHEAD, a master automotive technician guiding a
@@ -67,7 +67,7 @@ def run_interview(
         if on_event:
             on_event(kind, text)
 
-    brain = ClaudeProvider()
+    brain = get_provider()
     hits, queries = _retrieve(problem, car, brain, per_query=5, final=20)
     emit("search", f"Pulled {len(hits)} manual sections to reason over.")
     system = INTERVIEW_SYSTEM.format(context=build_context(problem, car, hits))
@@ -137,7 +137,7 @@ class DiagnosisSession:
         self.problem = problem
         self.car = car
         self.max_questions = max_questions
-        self.brain = ClaudeProvider()
+        self.brain = get_provider()
         self.hits, _ = _retrieve(problem, car, self.brain, per_query=5, final=20)
         self.system = INTERVIEW_SYSTEM.format(context=build_context(problem, car, self.hits))
         self.messages = [{"role": "user", "content": f"PROBLEM: {problem}"}]
