@@ -59,6 +59,9 @@ class OllamaProvider(AIProvider):
         # care which brain is loaded.
         chat = [{"role": "system", "content": system}]
         chat += [{"role": m["role"], "content": _text_only(m["content"])} for m in messages]
+        options = {"num_predict": max_tokens, "num_ctx": 16384, "temperature": 0.3}
+        if settings.ollama_num_gpu:
+            options["num_gpu"] = int(settings.ollama_num_gpu)
         resp = httpx.post(
             f"{self.host}/api/chat",
             json={
@@ -68,7 +71,7 @@ class OllamaProvider(AIProvider):
                 # num_ctx must fit the full interview context (20 excerpts ≈ 6k
                 # tokens) or Ollama silently truncates from the top — which eats
                 # the system prompt and with it the QUESTION:/DIAGNOSIS: protocol.
-                "options": {"num_predict": max_tokens, "num_ctx": 16384, "temperature": 0.3},
+                "options": options,
             },
             timeout=600.0,
         )

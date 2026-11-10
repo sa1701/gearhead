@@ -18,6 +18,8 @@ class Settings:
     provider: str = os.getenv("GEARHEAD_PROVIDER", "auto")
     ollama_model: str = os.getenv("GEARHEAD_OLLAMA_MODEL", "qwen2.5:7b-instruct")
     ollama_host: str = os.getenv("GEARHEAD_OLLAMA_HOST", "http://127.0.0.1:11434")
+    # GPU layers for Ollama. Unset = let Ollama decide; 0 = force CPU (useful when the GPU is throttled).
+    ollama_num_gpu: str | None = os.getenv("GEARHEAD_OLLAMA_NUM_GPU")
 
     manuals_dir: Path = PROJECT_ROOT / "manuals"
     chroma_dir: Path = PROJECT_ROOT / "chroma_db"
