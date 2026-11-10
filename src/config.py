@@ -21,9 +21,16 @@ class Settings:
     # GPU layers for Ollama. Unset = let Ollama decide; 0 = force CPU (useful when the GPU is throttled).
     ollama_num_gpu: str | None = os.getenv("GEARHEAD_OLLAMA_NUM_GPU")
 
+    # How manual chunks are picked: "rerank" (search wide, then a local cross-encoder
+    # re-orders) or "expand" (the older LLM query-expansion path).
+    retrieval: str = os.getenv("GEARHEAD_RETRIEVAL", "rerank")
+    rerank_model: str = os.getenv("GEARHEAD_RERANK_MODEL", "ms-marco-MiniLM-L-12-v2")
+    rerank_pool: int = int(os.getenv("GEARHEAD_RERANK_POOL", "40"))  # candidates read by the reranker
+
     manuals_dir: Path = PROJECT_ROOT / "manuals"
     chroma_dir: Path = PROJECT_ROOT / "chroma_db"
     images_dir: Path = PROJECT_ROOT / "page_images"
+    models_dir: Path = PROJECT_ROOT / "models"
 
     def resolved_provider(self) -> str:
         if self.provider in ("claude", "ollama"):
