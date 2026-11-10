@@ -11,6 +11,7 @@ from typing import Callable
 from ..ai import get_provider
 from ..config import settings
 from .diagnose import _retrieve, build_context
+from .gate import NOT_FOUND_MESSAGE, manual_covers
 
 INTERVIEW_SYSTEM = """You are GEARHEAD, a master automotive technician guiding a
 capable DIYer through a diagnosis, like a real mechanic standing next to them.
@@ -70,6 +71,10 @@ def run_interview(
 
     brain = get_provider()
     hits, queries = _retrieve(problem, car, brain, per_query=5, final=settings.interview_chunk_count())
+    if not manual_covers(hits):
+        emit("search", "No good match in the manual. Declining instead of guessing.")
+        return {"diagnosis": NOT_FOUND_MESSAGE, "questions_asked": 0, "sources": [],
+                "total_cache_read_tokens": 0}
     emit("search", f"Pulled {len(hits)} manual sections to reason over.")
     system = INTERVIEW_SYSTEM.format(context=build_context(problem, car, hits))
 
@@ -123,12 +128,15 @@ _GAP_PHRASES = (
 )
 
 
+MIN_CONFIDENCE = 30  # bottom of the tachometer gauge
+
+
 def _confidence(questions_asked: int, diagnosis_text: str) -> int:
     """Rough diagnostic-confidence score (30-95) for the tachometer gauge."""
     score = 60 + min(questions_asked, 3) * 9  # more narrowing → more confident
     if any(p in diagnosis_text.lower() for p in _GAP_PHRASES):
         score -= 28  # the model flagged gaps in the manual → lower confidence
-    return max(30, min(95, score))
+    return max(MIN_CONFIDENCE, min(95, score))
 
 
 class DiagnosisSession:
@@ -141,7 +149,10 @@ class DiagnosisSession:
         self.brain = get_provider()
         self.hits, _ = _retrieve(problem, car, self.brain, per_query=5,
                                  final=settings.interview_chunk_count())
-        self.system = INTERVIEW_SYSTEM.format(context=build_context(problem, car, self.hits))
+        self.covered = manual_covers(self.hits)
+        if not self.covered:
+            self.hits = []  # nothing worth citing or illustrating
+        self.system = INTERVIEW_SYSTEM.format(context=build_context(problem, car, self.hits)) if self.covered else ""
         self.messages = [{"role": "user", "content": f"PROBLEM: {problem}"}]
         self.questions_asked = 0
         self.done = False
@@ -156,7 +167,13 @@ class DiagnosisSession:
             out.append({"section": h["section"], "page": h["page"], "source_file": h["source_file"]})
         return out
 
+    def _decline(self) -> dict:
+        self.done = True
+        return {"type": "diagnosis", "text": NOT_FOUND_MESSAGE, "confidence": MIN_CONFIDENCE, "sources": []}
+
     def _turn(self, force: bool = False) -> dict:
+        if not self.covered:
+            return self._decline()
         msgs = self.messages
         if force:
             msgs = self.messages + [

@@ -30,6 +30,8 @@ class Settings:
     retrieval: str = os.getenv("GEARHEAD_RETRIEVAL", "rerank")
     rerank_model: str = os.getenv("GEARHEAD_RERANK_MODEL", "ms-marco-MiniLM-L-12-v2")
     rerank_pool: int = int(os.getenv("GEARHEAD_RERANK_POOL", "40"))  # candidates read by the reranker
+    # Below this best rerank score the brain declines instead of guessing. 0 switches the gate off.
+    gate_min_score: float = float(os.getenv("GEARHEAD_GATE_MIN_SCORE", "0.1"))
     # Manual chunks the interview reasons over. Unset = pick by brain (see interview_chunk_count).
     interview_chunks: str | None = os.getenv("GEARHEAD_INTERVIEW_CHUNKS")
 

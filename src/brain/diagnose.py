@@ -11,6 +11,7 @@ from ..config import settings
 from ..library.fixdb import search_fixes
 from ..library.rerank import rerank
 from ..library.search import search
+from .gate import NOT_FOUND_MESSAGE, manual_covers
 
 SYSTEM = """You are GEARHEAD, a master automotive technician assistant.
 
@@ -119,9 +120,11 @@ def diagnose_once(
     car: str = "nissan-patrol-y61",
     max_tokens: int = 1500,
 ) -> dict:
-    """One-shot grounded diagnosis. Returns {'answer', 'sources', 'queries'}."""
+    """One-shot grounded diagnosis. Returns {'answer', 'sources', 'queries', 'refused'}."""
     brain = get_provider()
     hits, queries = _retrieve(problem, car, brain)
+    if not manual_covers(hits):
+        return {"answer": NOT_FOUND_MESSAGE, "sources": [], "queries": queries, "refused": True}
     user = (
         f"CAR: {car}\n"
         f"PROBLEM: {problem}\n\n"
@@ -136,4 +139,5 @@ def diagnose_once(
         "answer": answer,
         "sources": [(h["section"], h["page"]) for h in hits],
         "queries": queries,
+        "refused": False,
     }
