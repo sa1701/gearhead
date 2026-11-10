@@ -1,11 +1,13 @@
 """Retrieval eval: does the right manual section and page reach the top of the search?
 
-Three ways of searching are compared on the same questions:
+Four ways of searching are compared on the same questions:
   raw       the owner's question straight into the vector search
-  expanded  the real pipeline: the brain rewrites the question into search phrases first
+  expanded  the older pipeline: the brain rewrites the question into search phrases first
   manual    the manual's own wording of the symptom (an upper bound, not a real user)
+  rerank    the current pipeline: search wide, then a local cross-encoder re-orders
 
-Run:  python -m eval.retrieval_eval [limit]
+Run:  python -m eval.retrieval_eval            # raw, expanded, manual (needs the model)
+      python -m eval.retrieval_eval rerank     # rerank only (no model call)
 """
 from __future__ import annotations
 
@@ -13,7 +15,8 @@ import sys
 import time
 
 from src.ai import get_provider
-from src.brain.diagnose import _retrieve
+from src.brain.diagnose import _retrieve, _retrieve_expanded
+from src.config import settings
 from src.library.search import search
 
 from .build_gold import load_fixes, symptom_hash
@@ -23,6 +26,7 @@ from .store import CAR, RESULTS_DIR, append_jsonl, load_gold, pending
 TOP_N = 20          # same depth the interview loop pulls
 PER_QUERY = 5       # same per-phrase depth the interview loop uses
 OUT = RESULTS_DIR / "retrieval.jsonl"
+OUT_RERANK = RESULTS_DIR / "retrieval_rerank.jsonl"
 
 
 def _ranks(hits: list[dict], row: dict) -> dict:
@@ -41,7 +45,7 @@ def run(limit: int | None = None, car: str = CAR) -> None:
     for i, row in enumerate(todo, 1):
         question = row["question"]
         started = time.perf_counter()
-        expanded_hits, queries = _retrieve(question, car, brain, per_query=PER_QUERY, final=TOP_N)
+        expanded_hits, queries = _retrieve_expanded(question, car, brain, PER_QUERY, TOP_N)
         append_jsonl(OUT, {
             "id": row["id"],
             "section_code": row["section_code"],
@@ -54,6 +58,32 @@ def run(limit: int | None = None, car: str = CAR) -> None:
         print(f"  {i}/{len(todo)} {row['id']}")
 
 
+def run_rerank(limit: int | None = None, car: str = CAR) -> None:
+    """Score the rerank pipeline through the same function the app calls."""
+    if settings.retrieval != "rerank":
+        raise SystemExit("GEARHEAD_RETRIEVAL is not 'rerank'; unset it to score the rerank pipeline.")
+    todo = pending(load_gold(car, answerable=True), OUT_RERANK)[:limit]
+    print(f"Rerank retrieval eval: {len(todo)} questions to run -> {OUT_RERANK}")
+
+    for i, row in enumerate(todo, 1):
+        started = time.perf_counter()
+        hits, _ = _retrieve(row["question"], car, brain=None, final=TOP_N)
+        append_jsonl(OUT_RERANK, {
+            "id": row["id"],
+            "section_code": row["section_code"],
+            "rerank": _ranks(hits, row),
+            "pool": max(settings.rerank_pool, TOP_N),
+            "model": settings.rerank_model,
+            "seconds": round(time.perf_counter() - started, 1),
+        })
+        print(f"  {i}/{len(todo)} {row['id']}")
+
+
 if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")
-    run(limit=int(sys.argv[1]) if len(sys.argv) > 1 else None)
+    numbers = [a for a in sys.argv[1:] if a.isdigit()]
+    count = int(numbers[0]) if numbers else None
+    if "rerank" in sys.argv[1:]:
+        run_rerank(limit=count)
+    else:
+        run(limit=count)

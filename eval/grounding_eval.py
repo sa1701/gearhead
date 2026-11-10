@@ -4,6 +4,7 @@ Stores the answer next to the exact pages that were in the model's context, so
 report.py can check every citation and every refusal without re-running the model.
 
 Run:  python -m eval.grounding_eval [limit] [--no-fixdb]
+The retrieval pipeline under test is whatever GEARHEAD_RETRIEVAL selects.
 """
 from __future__ import annotations
 
@@ -13,6 +14,7 @@ import time
 from itertools import chain, zip_longest
 
 from src.brain import diagnose
+from src.config import settings
 from src.library.fixdb import search_fixes
 from src.library.ingest import SECTION_NAMES
 
@@ -41,12 +43,19 @@ def _fix_pages(question: str, car: str) -> list[list]:
     ]
 
 
+def results_name(retrieval: str, use_fixdb: bool) -> str:
+    """One file per pipeline so runs never mix: grounding.jsonl is the expansion baseline."""
+    mode = "" if retrieval == "expand" else f"_{retrieval}"
+    return f"grounding{mode}{'' if use_fixdb else '_nofixdb'}.jsonl"
+
+
 def run(limit: int | None = None, use_fixdb: bool = True, car: str = CAR) -> None:
-    out = RESULTS_DIR / ("grounding.jsonl" if use_fixdb else "grounding_nofixdb.jsonl")
+    out = RESULTS_DIR / results_name(settings.retrieval, use_fixdb)
     if not use_fixdb:
         diagnose.search_fixes = lambda *args, **kwargs: []  # ablation: raw excerpts only
     todo = pending(_sample(car), out)[:limit]
-    print(f"Grounding eval (fix DB {'on' if use_fixdb else 'off'}): {len(todo)} to run -> {out}")
+    print(f"Grounding eval ({settings.retrieval} retrieval, fix DB {'on' if use_fixdb else 'off'}): "
+          f"{len(todo)} to run -> {out}")
 
     for i, row in enumerate(todo, 1):
         started = time.perf_counter()

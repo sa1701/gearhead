@@ -12,6 +12,7 @@ from .metrics import (
     answer_outcome,
     citation_is_valid,
     hit_rate,
+    paired_change,
     mean_reciprocal_rank,
     normalise_section,
     parse_citations,
@@ -20,7 +21,14 @@ from .metrics import (
 from .store import RESULTS_DIR, read_results
 
 KS = (1, 3, 6, 20)          # the one-shot diagnosis passes 6 chunks, the interview 20
-CONFIGS = ("raw", "expanded", "manual")
+CONFIGS = ("raw", "expanded", "manual", "rerank")
+GROUNDING_RUNS = (           # results file stem -> report heading
+    ("grounding", "Grounding: expansion pipeline (baseline), Fix DB on"),
+    ("grounding_nofixdb", "Grounding: expansion pipeline (baseline), Fix DB off"),
+    ("grounding_rerank", "Grounding: rerank pipeline, Fix DB on"),
+    ("grounding_rerank_nofixdb", "Grounding: rerank pipeline, Fix DB off"),
+)
+HEADLINE_K = 6               # chunks the one-shot diagnosis passes to the model
 
 
 def _rate(successes: int, total: int) -> dict:
@@ -32,9 +40,17 @@ def _rate(successes: int, total: int) -> dict:
     }
 
 
+def merge_by_id(rows: list[dict], extra: list[dict], field: str) -> list[dict]:
+    """Copy one field from a second results file onto the rows with the same id."""
+    by_id = {r["id"]: r[field] for r in extra}
+    return [{**r, field: by_id[r["id"]]} if r["id"] in by_id else r for r in rows]
+
+
 def retrieval_summary(rows: list[dict]) -> dict:
     summary = {}
     for config in CONFIGS:
+        if not all(config in r for r in rows):
+            continue  # that search mode has not been run on every question yet
         section = [r[config]["section_rank"] for r in rows]
         page = [r[config]["page_rank"] for r in rows]
         summary[config] = {
@@ -44,6 +60,9 @@ def retrieval_summary(rows: list[dict]) -> dict:
             "section_mrr": round(mean_reciprocal_rank(section), 3),
             "page_mrr": round(mean_reciprocal_rank(page), 3),
         }
+    if "rerank" in summary:
+        summary[f"rerank_vs_raw_page@{HEADLINE_K}"] = paired_change(
+            [r["raw"]["page_rank"] for r in rows], [r["rerank"]["page_rank"] for r in rows], HEADLINE_K)
     return summary
 
 
@@ -114,7 +133,7 @@ def to_markdown(summary: dict) -> str:
             "| Search | page@1 | page@3 | page@6 | page@20 | section@1 | section@6 | page MRR |",
             "|---|---|---|---|---|---|---|---|",
         ]
-        for config in CONFIGS:
+        for config in (c for c in CONFIGS if c in retrieval):
             r = retrieval[config]
             lines.append(
                 f"| {config} | " + " | ".join(_pct(r["page_hit"][f"@{k}"]) for k in KS)
@@ -122,8 +141,13 @@ def to_markdown(summary: dict) -> str:
                 + f" | {r['page_mrr']:.2f} |"
             )
         lines.append("")
-    for key, title in (("grounding", "Grounding, Fix DB on"),
-                       ("grounding_nofixdb", "Grounding, Fix DB off")):
+        change = retrieval.get(f"rerank_vs_raw_page@{HEADLINE_K}")
+        if change:
+            lines += [
+                f"Rerank against the plain question at page@{HEADLINE_K}: {change['gained']} questions "
+                f"gained, {change['lost']} lost (exact sign test p = {change['p_value']:.3f}).", "",
+            ]
+    for key, title in GROUNDING_RUNS:
         g = summary.get(key)
         if not g:
             continue
@@ -148,10 +172,11 @@ def to_markdown(summary: dict) -> str:
 
 def build_summary() -> dict:
     summary = {}
-    retrieval_rows = read_results(RESULTS_DIR / "retrieval.jsonl")
+    retrieval_rows = merge_by_id(read_results(RESULTS_DIR / "retrieval.jsonl"),
+                                 read_results(RESULTS_DIR / "retrieval_rerank.jsonl"), field="rerank")
     if retrieval_rows:
         summary["retrieval"] = retrieval_summary(retrieval_rows)
-    for name in ("grounding", "grounding_nofixdb"):
+    for name, _ in GROUNDING_RUNS:
         rows = read_results(RESULTS_DIR / f"{name}.jsonl")
         if rows:
             summary[name] = grounding_summary(rows)

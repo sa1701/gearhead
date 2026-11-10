@@ -1,5 +1,5 @@
 """Unit tests for the aggregation in eval/report.py (no model, no files)."""
-from eval.report import grounding_summary, retrieval_summary, to_markdown
+from eval.report import grounding_summary, merge_by_id, retrieval_summary, to_markdown
 from eval.store import read_results
 
 
@@ -18,6 +18,32 @@ def test_retrieval_summary_reports_hit_rates_per_search_mode():
     assert summary["expanded"]["page_hit"]["@6"] == 0.5
     assert summary["expanded"]["section_hit"]["@1"] == 0.0
     assert summary["manual"]["page_mrr"] == 1.0
+
+
+def test_retrieval_summary_skips_a_search_mode_that_was_not_run():
+    summary = retrieval_summary([_retrieval_row(1, 2)])
+
+    assert "rerank" not in summary
+
+
+def test_retrieval_summary_compares_rerank_against_the_plain_question():
+    rows = [
+        {**_retrieval_row(9, 9), "rerank": {"section_rank": 1, "page_rank": 2}},
+        {**_retrieval_row(1, 1), "rerank": {"section_rank": 1, "page_rank": 1}},
+    ]
+
+    summary = retrieval_summary(rows)
+
+    assert summary["rerank"]["page_hit"]["@6"] == 1.0
+    assert summary["rerank_vs_raw_page@6"]["gained"] == 1
+    assert summary["rerank_vs_raw_page@6"]["lost"] == 0
+
+
+def test_merge_by_id_adds_fields_only_where_the_id_matches():
+    base = [{"id": "a", "raw": 1}, {"id": "b", "raw": 2}]
+    extra = [{"id": "b", "rerank": 9, "seconds": 3}]
+
+    assert merge_by_id(base, extra, field="rerank") == [{"id": "a", "raw": 1}, {"id": "b", "raw": 2, "rerank": 9}]
 
 
 ANSWERED_WITH_GOLD = {
