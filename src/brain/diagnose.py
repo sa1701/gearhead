@@ -7,7 +7,9 @@ from __future__ import annotations
 
 from ..ai import get_provider
 from ..ai.provider import AIProvider
+from ..config import settings
 from ..library.fixdb import search_fixes
+from ..library.rerank import rerank
 from ..library.search import search
 
 SYSTEM = """You are GEARHEAD, a master automotive technician assistant.
@@ -86,6 +88,20 @@ def _expand_queries(problem: str, brain: AIProvider) -> list[str]:
 
 def _retrieve(problem: str, car: str, brain: AIProvider,
               per_query: int = 4, final: int = 6) -> tuple[list[dict], list[str]]:
+    """Pick the manual chunks to reason over. Returns (hits, the queries searched).
+
+    Default ("rerank"): search wide with the owner's own words, then a local
+    cross-encoder re-orders the candidates. On the eval set this puts the right
+    page in the top 6 more often than query expansion, with no model call.
+    """
+    if settings.retrieval == "expand":
+        return _retrieve_expanded(problem, car, brain, per_query, final)
+    pool = max(settings.rerank_pool, final)
+    return rerank(problem, search(problem, n=pool, car=car), top_n=final), [problem]
+
+
+def _retrieve_expanded(problem: str, car: str, brain: AIProvider,
+                       per_query: int, final: int) -> tuple[list[dict], list[str]]:
     """Multi-query search: expand the problem, search each, merge the best hits."""
     queries = _expand_queries(problem, brain)
     best: dict[tuple, dict] = {}
