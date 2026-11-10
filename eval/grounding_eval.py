@@ -60,13 +60,15 @@ def run(limit: int | None = None, use_fixdb: bool = True, car: str = CAR) -> Non
     for i, row in enumerate(todo, 1):
         started = time.perf_counter()
         result = diagnose.diagnose_once(row["question"], car=car)
+        gated = result.get("refused", False)  # the coverage gate declined before any model call
         record = {
             "id": row["id"],
             "answerable": row["answerable"],
             "question": row["question"],
             "answer": result["answer"],
             "context": [list(source) for source in result["sources"]],
-            "fix_context": _fix_pages(row["question"], car) if use_fixdb else [],
+            "fix_context": _fix_pages(row["question"], car) if use_fixdb and not gated else [],
+            "gated": gated,
             "seconds": round(time.perf_counter() - started, 1),
         }
         if row["answerable"]:

@@ -1,5 +1,7 @@
 """Unit tests for the aggregation in eval/report.py (no model, no files)."""
-from eval.report import grounding_summary, merge_by_id, retrieval_summary, to_markdown
+import pytest
+
+from eval.report import gate_summary, grounding_summary, merge_by_id, retrieval_summary, to_markdown
 from eval.store import read_results
 
 
@@ -109,6 +111,47 @@ def test_read_results_skips_a_cut_off_last_line_and_repeated_ids(tmp_path):
     path.write_text('{"id": "a", "v": 1}\n{"id": "a", "v": 2}\n{"id": "b", "v": 3}\n{"id": "c", "v', encoding="utf-8")
 
     assert read_results(path) == [{"id": "a", "v": 1}, {"id": "b", "v": 3}]
+
+
+def test_an_answer_stopped_by_the_gate_counts_as_a_refusal():
+    gated = {"answerable": False, "gated": True, "answer": "I could not match this to a page.",
+             "context": [], "fix_context": [], "seconds": 2.0}
+
+    summary = grounding_summary([gated])
+
+    assert summary["unanswerable_refused"]["rate"] == 1.0
+
+
+GATE_ROWS = [
+    {"id": "u-01", "answerable": False, "blocked": True},
+    {"id": "u-02", "answerable": False, "blocked": False},
+    {"id": "u-03", "answerable": False, "blocked": False},
+    {"id": "a-01", "answerable": True, "blocked": False},
+    {"id": "a-02", "answerable": True, "blocked": True},
+]
+
+
+def test_gate_summary_reports_what_was_blocked_on_each_side():
+    summary = gate_summary(GATE_ROWS, model_rows=[])
+
+    assert summary["unanswerable_blocked"]["rate"] == pytest.approx(1 / 3, abs=0.001)
+    assert summary["unanswerable_blocked"]["n"] == 3
+    assert summary["answerable_blocked"]["rate"] == 0.5
+    assert "given_steps_before" not in summary
+
+
+def test_gate_summary_combines_the_gate_with_what_the_model_did_on_its_own():
+    model_rows = [
+        {**HEDGED_UNANSWERABLE, "id": "u-01"},   # gate blocks it
+        {**HEDGED_UNANSWERABLE, "id": "u-02"},   # gate misses it and the model gives steps
+        {**REFUSED_UNANSWERABLE, "id": "u-03"},  # gate misses it but the model refuses
+    ]
+
+    summary = gate_summary(GATE_ROWS, model_rows)
+
+    assert summary["given_steps_before"]["rate"] == pytest.approx(2 / 3, abs=0.001)
+    assert summary["given_steps_after"]["rate"] == pytest.approx(1 / 3, abs=0.001)
+    assert summary["given_steps_after"]["n"] == 3
 
 
 def test_grounding_summary_of_no_rows_is_empty():

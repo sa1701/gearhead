@@ -77,7 +77,7 @@ def _score_answer(row: dict) -> dict:
     scored = {
         "citations": len(citations),
         "valid": len(valid),
-        "outcome": answer_outcome(row["answer"]),
+        "outcome": "refused" if row.get("gated") else answer_outcome(row["answer"]),
     }
     if row["answerable"]:
         gold = {(normalise_section(row["gold"]["section"]), p) for p in row["gold"]["pages"]}
@@ -111,6 +111,32 @@ def grounding_summary(rows: list[dict]) -> dict:
         "gold_page_cited": _rate(sum(s["gold_cited"] for s in answerable), len(answerable)),
         "median_seconds": statistics.median(r["seconds"] for r in rows),
     }
+
+
+def gate_summary(gate_rows: list[dict], model_rows: list[dict]) -> dict:
+    """What the coverage gate blocks, and how that changes what reaches the user.
+
+    model_rows are answers from a run WITHOUT the gate. For the unanswerable questions
+    in that run: "before" is how often the model gave repair steps on its own, "after"
+    is how often it still would once the gate has removed the questions it blocks.
+    """
+    if not gate_rows:
+        return {}
+    unanswerable = [r for r in gate_rows if not r["answerable"]]
+    answerable = [r for r in gate_rows if r["answerable"]]
+    summary = {
+        "threshold": gate_rows[0].get("threshold"),
+        "unanswerable_blocked": _rate(sum(r["blocked"] for r in unanswerable), len(unanswerable)),
+        "answerable_blocked": _rate(sum(r["blocked"] for r in answerable), len(answerable)),
+    }
+    blocked = {r["id"]: r["blocked"] for r in gate_rows}
+    judged = [(r["id"], _score_answer(r)["outcome"] != "refused")
+              for r in model_rows if not r["answerable"] and r["id"] in blocked]
+    if judged:
+        summary["given_steps_before"] = _rate(sum(steps for _, steps in judged), len(judged))
+        summary["given_steps_after"] = _rate(
+            sum(steps and not blocked[qid] for qid, steps in judged), len(judged))
+    return summary
 
 
 def _pct(value: float | None) -> str:
@@ -167,6 +193,20 @@ def to_markdown(summary: dict) -> str:
             _rate_line("Answer cites the correct page", g["gold_page_cited"]),
             "", f"Median time per answer: {g['median_seconds']:.0f} s.", "",
         ]
+    gate = summary.get("gate")
+    if gate:
+        lines += [
+            f"## Coverage gate (decline when the best rerank score is under {gate['threshold']})", "",
+            "| Measure | Result | 95% interval | n |", "|---|---|---|---|",
+            _rate_line("No answer in manual: stopped before the model", gate["unanswerable_blocked"]),
+            _rate_line("Answer in manual: stopped anyway (asked for more detail)", gate["answerable_blocked"]),
+        ]
+        if "given_steps_before" in gate:
+            lines += [
+                _rate_line("No answer in manual: model gives repair steps, no gate", gate["given_steps_before"]),
+                _rate_line("No answer in manual: model gives repair steps, with the gate", gate["given_steps_after"]),
+            ]
+        lines.append("")
     return "\n".join(lines)
 
 
@@ -180,6 +220,9 @@ def build_summary() -> dict:
         rows = read_results(RESULTS_DIR / f"{name}.jsonl")
         if rows:
             summary[name] = grounding_summary(rows)
+    gate = gate_summary(read_results(RESULTS_DIR / "gate.jsonl"), read_results(RESULTS_DIR / "grounding.jsonl"))
+    if gate:
+        summary["gate"] = gate
     return summary
 
 
