@@ -47,6 +47,24 @@ def mean_reciprocal_rank(ranks: Sequence[int | None]) -> float:
     return sum(1 / r for r in ranks if r is not None) / len(ranks)
 
 
+def paired_change(before: Sequence[int | None], after: Sequence[int | None], k: int) -> dict:
+    """Same questions, two systems: how many were gained and lost at top k.
+
+    p_value is the exact two-sided sign test on the questions that changed
+    (McNemar's exact test): the chance of a split this uneven if the two
+    systems were really equally good.
+    """
+    hit_before = [r is not None and r <= k for r in before]
+    hit_after = [r is not None and r <= k for r in after]
+    gained = sum(a and not b for b, a in zip(hit_before, hit_after))
+    lost = sum(b and not a for b, a in zip(hit_before, hit_after))
+    changed = gained + lost
+    if changed == 0:
+        return {"gained": 0, "lost": 0, "p_value": 1.0}
+    tail = sum(math.comb(changed, i) for i in range(min(gained, lost) + 1)) / 2**changed
+    return {"gained": gained, "lost": lost, "p_value": min(1.0, 2 * tail)}
+
+
 # --- citations ---------------------------------------------------------------
 
 def normalise_section(name: str) -> str:

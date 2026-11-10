@@ -7,6 +7,7 @@ from eval.metrics import (
     hit_rate,
     mean_reciprocal_rank,
     normalise_section,
+    paired_change,
     parse_citations,
     wilson_interval,
 )
@@ -97,6 +98,29 @@ def test_wilson_interval_brackets_the_observed_rate():
     assert low < 0.8 < high
     assert low == pytest.approx(0.711, abs=0.002)
     assert high == pytest.approx(0.867, abs=0.002)
+
+
+def test_paired_change_counts_questions_gained_and_lost_at_k():
+    before = [1, 9, None, 2, 8]
+    after = [1, 3, 5, 9, None]
+
+    change = paired_change(before, after, k=6)
+
+    assert (change["gained"], change["lost"]) == (2, 1)
+
+
+def test_paired_change_p_value_is_the_exact_two_sided_sign_test():
+    before = [None] * 10
+    after = [1] * 9 + [None]
+
+    change = paired_change(before, after, k=6)
+
+    assert (change["gained"], change["lost"]) == (9, 0)
+    assert change["p_value"] == pytest.approx(2 * 0.5**9)
+
+
+def test_paired_change_with_no_differences_has_p_value_one():
+    assert paired_change([1, None], [2, None], k=6)["p_value"] == 1.0
 
 
 def test_wilson_interval_of_no_data_is_the_full_range():
