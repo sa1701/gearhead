@@ -29,3 +29,4 @@ eval/gold_review.md
 
 # Local reranker model (downloaded on first use)
 models/
+eval/vague_review.md

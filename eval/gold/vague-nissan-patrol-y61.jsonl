@@ -1,0 +1,48 @@
+{"id": "v-01", "question": "pedal goes nearly to the floor before the brakes bite", "system": "Brakes", "sections": ["br"], "confirmed": false}
+{"id": "v-02", "question": "squeal when i brake lightly then grinding when i stop", "system": "Brakes", "sections": ["br"], "confirmed": false}
+{"id": "v-03", "question": "car pulls to the left when i brake hard", "system": "Brakes", "sections": ["br"], "confirmed": false}
+{"id": "v-04", "question": "brake pedal feels spongy after the car sits overnight", "system": "Brakes", "sections": ["br"], "confirmed": false}
+{"id": "v-05", "question": "gearbox slips between 2nd and 3rd and revs jump", "system": "Automatic gearbox", "sections": ["at"], "confirmed": false}
+{"id": "v-06", "question": "harsh jerk when it goes from reverse into drive", "system": "Automatic gearbox", "sections": ["at"], "confirmed": false}
+{"id": "v-07", "question": "stuck in 3rd and wont go up no matter how hard i press", "system": "Automatic gearbox", "sections": ["at"], "confirmed": false}
+{"id": "v-08", "question": "dash shows the gear letter flashing and it goes into limp mode", "system": "Automatic gearbox", "sections": ["at"], "confirmed": false}
+{"id": "v-09", "question": "clutch pedal sinks to the floor and stays there", "system": "Manual gearbox and clutch", "sections": ["mt", "cl"], "confirmed": false}
+{"id": "v-10", "question": "gears grind going into 2nd and it wont go in", "system": "Manual gearbox and clutch", "sections": ["mt", "cl"], "confirmed": false}
+{"id": "v-11", "question": "clutch slips when pulling away from a stop on a hill", "system": "Manual gearbox and clutch", "sections": ["mt", "cl"], "confirmed": false}
+{"id": "v-12", "question": "shudder through the floor when pulling away in first", "system": "Manual gearbox and clutch", "sections": ["mt", "cl"], "confirmed": false}
+{"id": "v-13", "question": "turn key and just a click then nothing", "system": "Starting and charging", "sections": ["el", "ec"], "confirmed": false}
+{"id": "v-14", "question": "cranks slow in the morning then fine after a jump start", "system": "Starting and charging", "sections": ["el", "ec"], "confirmed": false}
+{"id": "v-15", "question": "battery light comes on while driving", "system": "Starting and charging", "sections": ["el", "ec"], "confirmed": false}
+{"id": "v-16", "question": "wont start at all but the lights come on bright", "system": "Starting and charging", "sections": ["el", "ec"], "confirmed": false}
+{"id": "v-17", "question": "idles rough and shakes the whole car at traffic lights", "system": "Engine running badly", "sections": ["ec", "em"], "confirmed": false}
+{"id": "v-18", "question": "stalls when i stop at lights", "system": "Engine running badly", "sections": ["ec", "em"], "confirmed": false}
+{"id": "v-19", "question": "blue smoke out the back on cold start", "system": "Engine running badly", "sections": ["ec", "em"], "confirmed": false}
+{"id": "v-20", "question": "loses power going up hills, feels flat", "system": "Engine running badly", "sections": ["ec", "em"], "confirmed": false}
+{"id": "v-21", "question": "temp needle creeping up into the red in traffic", "system": "Overheating, coolant, oil", "sections": ["lc", "ec", "em"], "confirmed": false}
+{"id": "v-22", "question": "sweet smell after parking and a puddle under the front", "system": "Overheating, coolant, oil", "sections": ["lc", "ec", "em"], "confirmed": false}
+{"id": "v-23", "question": "oil light comes on at idle", "system": "Overheating, coolant, oil", "sections": ["lc", "ec", "em"], "confirmed": false}
+{"id": "v-24", "question": "white steam from under the bonnet after a long drive", "system": "Overheating, coolant, oil", "sections": ["lc", "ec", "em"], "confirmed": false}
+{"id": "v-25", "question": "steering wheel shakes at 100kmh", "system": "Steering", "sections": ["st", "fa"], "confirmed": false}
+{"id": "v-26", "question": "really heavy to turn when parking", "system": "Steering", "sections": ["st", "fa"], "confirmed": false}
+{"id": "v-27", "question": "whining noise when i turn the wheel all the way left", "system": "Steering", "sections": ["st", "fa"], "confirmed": false}
+{"id": "v-28", "question": "lots of play in the wheel before the front actually moves", "system": "Steering", "sections": ["st", "fa"], "confirmed": false}
+{"id": "v-29", "question": "clunk from the front end over every bump", "system": "Suspension, axles, wheels", "sections": ["fa", "ra"], "confirmed": false}
+{"id": "v-30", "question": "rattle and bounce from the back over speed humps", "system": "Suspension, axles, wheels", "sections": ["fa", "ra"], "confirmed": false}
+{"id": "v-31", "question": "vibration through the seat above 80kmh", "system": "Suspension, axles, wheels", "sections": ["fa", "ra"], "confirmed": false}
+{"id": "v-32", "question": "wobble at highway speed that goes away when it slows down", "system": "Suspension, axles, wheels", "sections": ["fa", "ra"], "confirmed": false}
+{"id": "v-33", "question": "4wd light flashing and it's stuck in 2wd", "system": "4WD system", "sections": ["tf", "pd", "fa"], "confirmed": false}
+{"id": "v-34", "question": "grinding or whining when i switch into 4wd", "system": "4WD system", "sections": ["tf", "pd", "fa"], "confirmed": false}
+{"id": "v-35", "question": "clunk when i get on and off the throttle in 4wd", "system": "4WD system", "sections": ["tf", "pd", "fa"], "confirmed": false}
+{"id": "v-36", "question": "hard to shift the 4wd lever, makes a horrible noise", "system": "4WD system", "sections": ["tf", "pd", "fa"], "confirmed": false}
+{"id": "v-37", "question": "aircon blows warm even on max cold", "system": "Heater and air conditioning", "sections": ["ha"], "confirmed": false}
+{"id": "v-38", "question": "smells like wet socks when the fan comes on", "system": "Heater and air conditioning", "sections": ["ha"], "confirmed": false}
+{"id": "v-39", "question": "heater only warm on the passenger side", "system": "Heater and air conditioning", "sections": ["ha"], "confirmed": false}
+{"id": "v-40", "question": "fan only works on the top speed setting", "system": "Heater and air conditioning", "sections": ["ha"], "confirmed": false}
+{"id": "v-41", "question": "indicators going fast and clicking", "system": "Body electrics", "sections": ["el", "bt"], "confirmed": false}
+{"id": "v-42", "question": "one window goes down but wont come back up", "system": "Body electrics", "sections": ["el", "bt"], "confirmed": false}
+{"id": "v-43", "question": "speedo jumps around and the fuel needle is dead", "system": "Body electrics", "sections": ["el", "bt"], "confirmed": false}
+{"id": "v-44", "question": "central locking only works on one door", "system": "Body electrics", "sections": ["el", "bt"], "confirmed": false}
+{"id": "v-45", "question": "airbag light stays on all the time", "system": "Airbag, seatbelt and ABS warnings", "sections": ["rs", "br"], "confirmed": false}
+{"id": "v-46", "question": "abs light and brake light on together", "system": "Airbag, seatbelt and ABS warnings", "sections": ["rs", "br"], "confirmed": false}
+{"id": "v-47", "question": "seatbelt warning dings but the belt is clipped in", "system": "Airbag, seatbelt and ABS warnings", "sections": ["rs", "br"], "confirmed": false}
+{"id": "v-48", "question": "airbag light flickers on startup then goes off", "system": "Airbag, seatbelt and ABS warnings", "sections": ["rs", "br"], "confirmed": false}

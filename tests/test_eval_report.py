@@ -1,7 +1,15 @@
 """Unit tests for the aggregation in eval/report.py (no model, no files)."""
 import pytest
 
-from eval.report import gate_summary, grounding_summary, merge_by_id, retrieval_summary, to_markdown
+from eval.report import (
+    followup_summary,
+    gate_summary,
+    grounding_summary,
+    merge_by_id,
+    retrieval_summary,
+    to_markdown,
+    vague_summary,
+)
 from eval.store import read_results
 
 
@@ -152,6 +160,72 @@ def test_gate_summary_combines_the_gate_with_what_the_model_did_on_its_own():
     assert summary["given_steps_before"]["rate"] == pytest.approx(2 / 3, abs=0.001)
     assert summary["given_steps_after"]["rate"] == pytest.approx(1 / 3, abs=0.001)
     assert summary["given_steps_after"]["n"] == 3
+
+
+VAGUE_ROWS = [
+    {"id": "v-01", "confirmed": False, "blocked": False,
+     "raw": {"rank": 1, "share": 0.5}, "rerank": {"rank": 3, "share": 0.5}},
+    {"id": "v-02", "confirmed": False, "blocked": True,
+     "raw": {"rank": None, "share": 0.0}, "rerank": {"rank": 1, "share": 1.0}},
+]
+
+
+def test_vague_summary_reports_right_system_rates_per_search_mode():
+    summary = vague_summary(VAGUE_ROWS)
+
+    assert summary["raw"]["first_chunk_right"]["rate"] == 0.5
+    assert summary["raw"]["any_chunk_right"]["rate"] == 0.5
+    assert summary["rerank"]["first_chunk_right"]["rate"] == 0.5
+    assert summary["rerank"]["any_chunk_right"]["rate"] == 1.0
+    assert summary["rerank"]["mean_share_right"] == 0.75
+
+
+def test_vague_summary_reports_the_gate_and_whether_labels_are_confirmed():
+    summary = vague_summary(VAGUE_ROWS)
+
+    assert summary["asked_for_detail"]["rate"] == 0.5
+    assert summary["labels_confirmed"] == 0
+    assert summary["n"] == 2
+
+
+def test_vague_summary_of_no_rows_is_empty():
+    assert vague_summary([]) == {}
+
+
+FOLLOWUP_ROWS = [
+    {"id": "v-01", "kind": "vague", "blocked_first": False, "blocked_final": False, "rank": 1},
+    {"id": "v-02", "kind": "vague", "blocked_first": True, "blocked_final": False, "rank": None},
+    {"id": "v-03", "kind": "vague", "blocked_first": True, "blocked_final": False, "rank": 2},
+    {"id": "v-04", "kind": "vague", "blocked_first": True, "blocked_final": True, "rank": None},
+    {"id": "u-01", "kind": "unanswerable", "blocked_first": True, "blocked_final": True, "rank": None},
+    {"id": "u-02", "kind": "unanswerable", "blocked_first": True, "blocked_final": False, "rank": None},
+]
+
+
+def test_followup_summary_splits_vague_complaints_by_when_they_got_through():
+    summary = followup_summary(FOLLOWUP_ROWS)
+
+    assert summary["vague_through_at_once"]["rate"] == 0.25
+    assert summary["vague_through_after_detail"]["rate"] == 0.5
+    assert summary["vague_declined"]["rate"] == 0.25
+
+
+def test_followup_summary_checks_the_right_system_only_for_complaints_that_got_through():
+    summary = followup_summary(FOLLOWUP_ROWS)
+
+    assert summary["vague_through_with_right_system"]["n"] == 3
+    assert summary["vague_through_with_right_system"]["rate"] == pytest.approx(2 / 3, abs=0.001)
+
+
+def test_followup_summary_reports_unanswerable_questions_still_declined_after_detail():
+    summary = followup_summary(FOLLOWUP_ROWS)
+
+    assert summary["unanswerable_declined"]["rate"] == 0.5
+    assert summary["unanswerable_declined"]["n"] == 2
+
+
+def test_followup_summary_of_no_rows_is_empty():
+    assert followup_summary([]) == {}
 
 
 def test_grounding_summary_of_no_rows_is_empty():

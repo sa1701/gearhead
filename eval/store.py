@@ -47,6 +47,17 @@ def load_gold(car: str = CAR, answerable: bool | None = None) -> list[dict]:
     return [r for r in rows if r["answerable"] is answerable]
 
 
+def load_vague(car: str = CAR) -> list[dict]:
+    """Vague owner complaints, labelled with the manual sections that could hold the answer."""
+    return read_jsonl(GOLD_DIR / f"vague-{car}.jsonl")
+
+
+def load_followups(car: str = CAR) -> dict[str, str]:
+    """Question id -> what the owner says when asked for more detail."""
+    path = GOLD_DIR / f"followups-{car}.json"
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+
+
 def pending(rows: list[dict], path: Path) -> list[dict]:
     """Rows not yet present in a results file (matched on id)."""
     done = {r["id"] for r in read_results(path)}

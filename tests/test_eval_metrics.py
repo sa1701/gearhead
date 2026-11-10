@@ -4,11 +4,13 @@ import pytest
 from eval.metrics import (
     citation_is_valid,
     first_hit_rank,
+    first_system_rank,
     hit_rate,
     mean_reciprocal_rank,
     normalise_section,
     paired_change,
     parse_citations,
+    share_from_systems,
     wilson_interval,
 )
 
@@ -34,6 +36,22 @@ def test_first_hit_rank_ignores_right_page_number_in_wrong_section():
 
 def test_first_hit_rank_is_none_for_empty_hits():
     assert first_hit_rank([], "br.pdf") is None
+
+
+def test_first_system_rank_accepts_any_of_the_listed_sections():
+    assert first_system_rank(HITS, ["st", "br"]) == 2
+
+
+def test_first_system_rank_is_none_when_no_chunk_is_from_a_listed_section():
+    assert first_system_rank(HITS, ["ha"]) is None
+
+
+def test_share_from_systems_is_the_fraction_of_chunks_from_the_listed_sections():
+    assert share_from_systems(HITS, ["br", "at"]) == 0.75
+
+
+def test_share_from_systems_of_no_chunks_is_zero():
+    assert share_from_systems([], ["br"]) == 0.0
 
 
 def test_hit_rate_counts_ranks_within_k():

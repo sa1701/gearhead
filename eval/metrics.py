@@ -34,6 +34,27 @@ def first_hit_rank(
     return None
 
 
+def _section_code(hit: dict) -> str:
+    return hit["source_file"].rsplit(".", 1)[0].lower()
+
+
+def first_system_rank(hits: Sequence[dict], sections: Iterable[str]) -> int | None:
+    """1-based rank of the first chunk from any of the acceptable manual sections."""
+    wanted = set(sections)
+    for rank, hit in enumerate(hits, start=1):
+        if _section_code(hit) in wanted:
+            return rank
+    return None
+
+
+def share_from_systems(hits: Sequence[dict], sections: Iterable[str]) -> float:
+    """Fraction of the chunks that come from the acceptable manual sections."""
+    if not hits:
+        return 0.0
+    wanted = set(sections)
+    return sum(_section_code(hit) in wanted for hit in hits) / len(hits)
+
+
 def hit_rate(ranks: Sequence[int | None], k: int) -> float:
     """Share of questions whose first correct chunk is in the top k."""
     if not ranks:

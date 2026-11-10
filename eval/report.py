@@ -139,6 +139,44 @@ def gate_summary(gate_rows: list[dict], model_rows: list[dict]) -> dict:
     return summary
 
 
+def followup_summary(rows: list[dict]) -> dict:
+    """The interview's ask-once-then-search-again flow, on vague and unanswerable questions."""
+    if not rows:
+        return {}
+    vague = [r for r in rows if r["kind"] == "vague"]
+    unanswerable = [r for r in rows if r["kind"] == "unanswerable"]
+    through = [r for r in vague if not r["blocked_final"]]
+    return {
+        "vague_through_at_once": _rate(sum(not r["blocked_first"] for r in vague), len(vague)),
+        "vague_through_after_detail": _rate(
+            sum(r["blocked_first"] and not r["blocked_final"] for r in vague), len(vague)),
+        "vague_declined": _rate(sum(r["blocked_final"] for r in vague), len(vague)),
+        "vague_through_with_right_system": _rate(sum(r["rank"] is not None for r in through), len(through)),
+        "unanswerable_declined": _rate(sum(r["blocked_final"] for r in unanswerable), len(unanswerable)),
+    }
+
+
+VAGUE_MODES = ("raw", "rerank")
+
+
+def vague_summary(rows: list[dict]) -> dict:
+    """Vague complaints: are the chunks from the right system, and how often does the gate step in?"""
+    if not rows:
+        return {}
+    summary = {
+        "n": len(rows),
+        "labels_confirmed": sum(bool(r.get("confirmed")) for r in rows),
+        "asked_for_detail": _rate(sum(r["blocked"] for r in rows), len(rows)),
+    }
+    for mode in VAGUE_MODES:
+        summary[mode] = {
+            "first_chunk_right": _rate(sum(r[mode]["rank"] == 1 for r in rows), len(rows)),
+            "any_chunk_right": _rate(sum(r[mode]["rank"] is not None for r in rows), len(rows)),
+            "mean_share_right": round(statistics.mean(r[mode]["share"] for r in rows), 3),
+        }
+    return summary
+
+
 def _pct(value: float | None) -> str:
     return "n/a" if value is None else f"{value * 100:.0f}%"
 
@@ -193,6 +231,35 @@ def to_markdown(summary: dict) -> str:
             _rate_line("Answer cites the correct page", g["gold_page_cited"]),
             "", f"Median time per answer: {g['median_seconds']:.0f} s.", "",
         ]
+    vague = summary.get("vague")
+    if vague:
+        status = (f"{vague['labels_confirmed']} of {vague['n']} labels confirmed by hand"
+                  if vague["labels_confirmed"] else "labels are provisional, not yet confirmed by hand")
+        lines += [
+            f"## Vague complaints ({vague['n']} questions, {status})", "",
+            "A chunk is right if it comes from a manual section that covers that system.", "",
+            "| Search | First chunk right | Any of 6 right | Average share of the 6 that are right |",
+            "|---|---|---|---|",
+        ]
+        for mode in VAGUE_MODES:
+            v = vague[mode]
+            lines.append(f"| {mode} | {_pct(v['first_chunk_right']['rate'])} | "
+                         f"{_pct(v['any_chunk_right']['rate'])} | {_pct(v['mean_share_right'])} |")
+        lines += ["", f"The gate asks for more detail on {_pct(vague['asked_for_detail']['rate'])} of them.", ""]
+    followup = summary.get("followup")
+    if followup:
+        lines += [
+            "## Interview opening: ask for detail once, then search again", "",
+            "| Measure | Result | 95% interval | n |", "|---|---|---|---|",
+            _rate_line("Vague complaint: good match straight away", followup["vague_through_at_once"]),
+            _rate_line("Vague complaint: good match after one round of detail", followup["vague_through_after_detail"]),
+            _rate_line("Vague complaint: still declined", followup["vague_declined"]),
+            _rate_line("Of those that got through: a chunk from the right system in the top 6",
+                       followup["vague_through_with_right_system"]),
+            _rate_line("No answer in manual: still declined after the owner adds detail",
+                       followup["unanswerable_declined"]),
+            "",
+        ]
     gate = summary.get("gate")
     if gate:
         lines += [
@@ -220,6 +287,12 @@ def build_summary() -> dict:
         rows = read_results(RESULTS_DIR / f"{name}.jsonl")
         if rows:
             summary[name] = grounding_summary(rows)
+    followup = followup_summary(read_results(RESULTS_DIR / "gate_followup.jsonl"))
+    if followup:
+        summary["followup"] = followup
+    vague = vague_summary(read_results(RESULTS_DIR / "retrieval_vague.jsonl"))
+    if vague:
+        summary["vague"] = vague
     gate = gate_summary(read_results(RESULTS_DIR / "gate.jsonl"), read_results(RESULTS_DIR / "grounding.jsonl"))
     if gate:
         summary["gate"] = gate
