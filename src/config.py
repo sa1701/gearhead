@@ -8,6 +8,10 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(PROJECT_ROOT / ".env")
 
 
+LOCAL_INTERVIEW_CHUNKS = 8
+CLOUD_INTERVIEW_CHUNKS = 20
+
+
 class Settings:
     anthropic_api_key: str = os.getenv("ANTHROPIC_API_KEY", "")
     model: str = os.getenv("GEARHEAD_MODEL", "claude-opus-4-8")
@@ -26,11 +30,23 @@ class Settings:
     retrieval: str = os.getenv("GEARHEAD_RETRIEVAL", "rerank")
     rerank_model: str = os.getenv("GEARHEAD_RERANK_MODEL", "ms-marco-MiniLM-L-12-v2")
     rerank_pool: int = int(os.getenv("GEARHEAD_RERANK_POOL", "40"))  # candidates read by the reranker
+    # Manual chunks the interview reasons over. Unset = pick by brain (see interview_chunk_count).
+    interview_chunks: str | None = os.getenv("GEARHEAD_INTERVIEW_CHUNKS")
 
     manuals_dir: Path = PROJECT_ROOT / "manuals"
     chroma_dir: Path = PROJECT_ROOT / "chroma_db"
     images_dir: Path = PROJECT_ROOT / "page_images"
     models_dir: Path = PROJECT_ROOT / "models"
+
+    def interview_chunk_count(self) -> int:
+        """How many manual chunks the interview loads.
+
+        A local model reads its context slowly (about 8 minutes for 20 chunks on a
+        laptop CPU), so it gets the 8 best. A cloud model reads 20 in seconds.
+        """
+        if self.interview_chunks:
+            return int(self.interview_chunks)
+        return LOCAL_INTERVIEW_CHUNKS if self.resolved_provider() == "ollama" else CLOUD_INTERVIEW_CHUNKS
 
     def resolved_provider(self) -> str:
         if self.provider in ("claude", "ollama"):
