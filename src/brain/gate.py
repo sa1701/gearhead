@@ -6,6 +6,9 @@ a low best score means one of two things: the manual does not cover it, or the
 question is too vague to match to a page. Either way the right move is the same:
 say so and ask for more detail, before any model call.
 
+The one-shot diagnosis declines straight away. The interview asks for detail once,
+searches again with the answer added, and only declines if there is still no match.
+
 On the eval set a threshold of 0.1 stops 28 of 30 unanswerable questions. It also
 stops 17 of 112 answerable ones, most of them one-line complaints such as
 "My Patrol won't start", which need more detail anyway.
@@ -23,6 +26,12 @@ NOT_FOUND_MESSAGE = (
     "- If it is an accessory or a feature this model does not have, the factory manual "
     "will not cover it.\n\n"
     "⚠️ Always verify with a qualified professional before relying on this."
+)
+
+
+DETAIL_PROMPT = (
+    "I could not match that to a page in the manual yet. Tell me more: what do you see, "
+    "hear or feel, when does it happen, and is any warning light on?"
 )
 
 

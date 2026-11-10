@@ -2,7 +2,7 @@
 import pytest
 
 from src.brain import diagnose, interview
-from src.brain.gate import NOT_FOUND_MESSAGE, manual_covers
+from src.brain.gate import DETAIL_PROMPT, NOT_FOUND_MESSAGE, manual_covers
 from src.config import settings
 
 
@@ -75,12 +75,53 @@ def test_one_shot_diagnosis_answers_when_the_manual_covers_it(monkeypatch):
     assert "Replace the pads" in result["answer"]
 
 
-def test_interview_session_declines_at_the_start_without_calling_the_model(monkeypatch):
-    monkeypatch.setattr(interview, "get_provider", lambda: _BrainThatMustNotBeCalled())
-    monkeypatch.setattr(interview, "_retrieve", lambda *a, **k: ([_hit(0.004)], ["carplay drops out"]))
+class _Retrieval:
+    """Fake retrieval: a weak match until the problem text contains the word 'grinding'."""
 
-    session = interview.DiagnosisSession("carplay drops out")
+    def __init__(self):
+        self.problems = []
+
+    def __call__(self, problem, *args, **kwargs):
+        self.problems.append(problem)
+        return ([_hit(0.9 if "grinding" in problem else 0.004)], [problem])
+
+
+def test_interview_session_asks_for_detail_first_without_calling_the_model(monkeypatch):
+    monkeypatch.setattr(interview, "get_provider", lambda: _BrainThatMustNotBeCalled())
+    monkeypatch.setattr(interview, "_retrieve", _Retrieval())
+
+    session = interview.DiagnosisSession("brakes feel wrong")
     step = session.start()
+
+    assert step == {"type": "question", "text": DETAIL_PROMPT, "questions_asked": 0}
+    assert session.done is False
+    assert session.hits == []
+
+
+def test_interview_session_searches_again_with_the_added_detail(monkeypatch):
+    retrieval = _Retrieval()
+    monkeypatch.setattr(interview, "get_provider", lambda: _BrainThatAnswers())
+    monkeypatch.setattr(interview, "_retrieve", retrieval)
+    monkeypatch.setattr(interview, "build_context", lambda problem, car, hits: "excerpts")
+    session = interview.DiagnosisSession("brakes feel wrong")
+    session.start()
+
+    step = session.answer("there is a grinding noise from the front when I stop")
+
+    assert retrieval.problems == ["brakes feel wrong",
+                                  "brakes feel wrong. there is a grinding noise from the front when I stop"]
+    assert step["type"] == "diagnosis"
+    assert "Replace the pads" in step["text"]
+    assert step["sources"] == [{"section": "Brakes", "page": 30, "source_file": "br.pdf"}]
+
+
+def test_interview_session_declines_when_detail_still_finds_no_match(monkeypatch):
+    monkeypatch.setattr(interview, "get_provider", lambda: _BrainThatMustNotBeCalled())
+    monkeypatch.setattr(interview, "_retrieve", _Retrieval())
+    session = interview.DiagnosisSession("carplay drops out")
+    session.start()
+
+    step = session.answer("it disconnects every few minutes on the highway")
 
     assert step["type"] == "diagnosis"
     assert step["text"] == NOT_FOUND_MESSAGE
@@ -102,12 +143,25 @@ def test_interview_session_runs_normally_when_the_manual_covers_it(monkeypatch):
     assert step["sources"] == [{"section": "Brakes", "page": 30, "source_file": "br.pdf"}]
 
 
-def test_terminal_interview_declines_without_calling_the_model(monkeypatch):
+def test_terminal_interview_asks_for_detail_once_then_declines(monkeypatch):
+    asked = []
     monkeypatch.setattr(interview, "get_provider", lambda: _BrainThatMustNotBeCalled())
-    monkeypatch.setattr(interview, "_retrieve", lambda *a, **k: ([_hit(0.004)], ["carplay drops out"]))
+    monkeypatch.setattr(interview, "_retrieve", _Retrieval())
 
-    result = interview.run_interview("carplay drops out", ask_fn=lambda question: "")
+    result = interview.run_interview("carplay drops out", ask_fn=lambda q: asked.append(q) or "every few minutes")
 
+    assert asked == [DETAIL_PROMPT]
     assert result["diagnosis"] == NOT_FOUND_MESSAGE
     assert result["sources"] == []
     assert result["questions_asked"] == 0
+
+
+def test_terminal_interview_continues_when_detail_finds_a_match(monkeypatch):
+    monkeypatch.setattr(interview, "get_provider", lambda: _BrainThatAnswers())
+    monkeypatch.setattr(interview, "_retrieve", _Retrieval())
+    monkeypatch.setattr(interview, "build_context", lambda problem, car, hits: "excerpts")
+
+    result = interview.run_interview("brakes feel wrong", ask_fn=lambda q: "a grinding noise when I stop")
+
+    assert "Replace the pads" in result["diagnosis"]
+    assert result["sources"] == [("Brakes", 30)]
