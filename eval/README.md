@@ -41,29 +41,48 @@ so the committed gold file contains no manual text.
 | Search | page@1 | page@3 | page@6 | page@20 | section@6 |
 |---|---|---|---|---|---|
 | Owner question as typed | 26% | 43% | 59% | 76% | 96% |
-| Owner question after query expansion (the shipped pipeline) | 17% | 29% | 41% | 63% | 91% |
-| Manual wording (upper bound) | 40% | 62% | 70% | 84% | 94% |
+| Query expansion (the first pipeline) | 17% | 29% | 41% | 63% | 91% |
+| **Search wide, then rerank (the current pipeline)** | **37%** | **56%** | **69%** | **79%** | **97%** |
+| Manual wording, no reranker (reference) | 40% | 62% | 70% | 84% | 94% |
 
-The one-shot diagnosis passes 6 chunks to the model and the interview passes 20. The
-expansion row was run with the interview's settings (5 hits per phrase, top 20 kept).
-Replaying the same stored phrases with the one-shot settings (4 per phrase, top 6)
-gives 43% at k = 6, so the conclusion is the same either way.
+The one-shot diagnosis passes 6 chunks to the model and the interview passes 20.
 
-What this shows:
+### What the first measurement showed
 
-- **Finding the right section is solved** (96% in the top 6). Finding the right page is not (59%).
-- **Query expansion makes page retrieval worse**, 59% down to 41% at k = 6. The local
+- **Finding the right section was already solved** (96% in the top 6). Finding the
+  right page was not (59%).
+- **Query expansion made page retrieval worse**, 59% down to 41% at k = 6. The local
   model turns a specific complaint ("will not shift from third to fourth") into
   generic phrases ("transmission shift issues"), and those phrases pull generic pages.
   Replaying the stored phrases offline confirmed it is the phrases, not the merge
   step: reciprocal rank fusion only brings the result back level with no expansion.
-- **Wording costs about 11 points.** Even the manual's own words only reach 70%, so
-  the rest of the gap is the index itself: fixed 900-character chunks and embeddings
-  that cannot tell "D3 to D4" from "D2 to D3".
+  (The expansion row used the interview settings. With the one-shot settings the same
+  stored phrases give 43%, so the conclusion is the same.)
+- **The right page was nearly always among the candidates.** It is in the top 50 of
+  vector plus keyword search for 91% of questions. The problem was the order.
 
-That sets the next piece of work: keyword search alongside the vector search, a
-reranker, and expansion switched off or restricted to vague inputs. The target is to
-beat 59% page@6 on this same set.
+### What was tried, and what was kept
+
+| Change | page@6 | Kept? |
+|---|---|---|
+| Keyword search (BM25) alone | 39% | No |
+| Vector and keyword fused by rank | 60% to 63% | No. Within noise of 59%, and it adds an index to maintain |
+| Rerank the top 30 vector hits with a cross-encoder | 70% | Yes |
+| Rerank the top 50 | 70% | No gain over a smaller pool |
+| Rerank vector plus keyword candidates | 69% to 70% | No gain |
+
+The kept design is the simplest one that worked: take the top 40 vector hits for the
+owner's own words, then let a small local cross-encoder (`ms-marco-MiniLM-L-12-v2`,
+ONNX, CPU only) read the question against each chunk and re-order them. No model call
+is spent on rewriting the question.
+
+Scored through the same function the app calls, the right page is in the top 6 for
+69% of questions, up from 59%. On the same 112 questions that is 16 gained and 5 lost
+(exact sign test, p = 0.027). The first hit is right 37% of the time, up from 26%.
+The gain was the same size on both halves of the set when it was split in two before
+choosing the design (70% and 70%).
+
+The old path is still there: set `GEARHEAD_RETRIEVAL=expand`.
 
 ## Grounding and refusal results
 
@@ -100,10 +119,15 @@ A phrase match alone would have counted it as a refusal.
 ## Running it
 
 ```bash
-python -m eval.retrieval_eval      # about 12 minutes
-python -m eval.grounding_eval      # about 3 hours on CPU, resumes if stopped
+python -m eval.retrieval_eval          # plain, expanded and manual wording. About 12 minutes
+python -m eval.retrieval_eval rerank   # the rerank pipeline. No model call
+python -m eval.grounding_eval          # hours on a laptop CPU, resumes if stopped
 python -m eval.report              # writes results/summary.json and results/REPORT.md
 pytest                             # unit tests for the scoring code
 ```
 
 Set `GEARHEAD_OLLAMA_NUM_GPU=0` to force the model onto the CPU.
+
+`grounding_eval` tests whichever pipeline `GEARHEAD_RETRIEVAL` selects and writes one
+file per pipeline (`grounding.jsonl` for `expand`, `grounding_rerank.jsonl` for
+`rerank`), so a baseline run and a rerank run never mix.
