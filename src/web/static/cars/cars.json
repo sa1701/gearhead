@@ -1,0 +1,56 @@
+{
+  "nissan-patrol-y61": {
+    "short": "Patrol Y61",
+    "make": "Nissan",
+    "model_name": "Patrol",
+    "code": "Y61 / GU",
+    "accent": "#d92b1e",
+    "backdrop": "desert",
+    "model": "nissan-patrol-y61.glb",
+    "heading": 0,
+    "credit": "3D model: \"Nissan Patrol (Y61) 5door 2004\" by Nieve5677, CC BY 4.0",
+    "credit_url": "https://skfb.ly/pvJSp",
+    "paints": [
+      {
+        "name": "White",
+        "colour": "#e9e7e2"
+      },
+      {
+        "name": "Silver",
+        "colour": "#9aa0a6"
+      },
+      {
+        "name": "Sand",
+        "colour": "#b39a78"
+      },
+      {
+        "name": "Deep red",
+        "colour": "#6e0f14"
+      },
+      {
+        "name": "Midnight blue",
+        "colour": "#101a33"
+      },
+      {
+        "name": "Black",
+        "colour": "#0c0c0d"
+      }
+    ],
+    "paint": "#e9e7e2",
+    "upright": [
+      -90,
+      0,
+      0
+    ],
+    "materials": {
+      "Material__4": "tire",
+      "mattemetal": "black"
+    },
+    "plate": {
+      "text": "CAIRO",
+      "base": "Material__1",
+      "lettering": "Material__2"
+    },
+    "model_lite": "nissan-patrol-y61-lite.glb"
+  }
+}
