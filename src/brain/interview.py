@@ -11,7 +11,7 @@ from typing import Callable
 from ..ai import get_provider
 from ..config import settings
 from .diagnose import _retrieve, build_context
-from .gate import NOT_FOUND_MESSAGE, manual_covers
+from .gate import NOT_FOUND_MESSAGE, covers
 
 INTERVIEW_SYSTEM = """You are GEARHEAD, a master automotive technician guiding a
 capable DIYer through a diagnosis, like a real mechanic standing next to them.
@@ -71,7 +71,7 @@ def run_interview(
 
     brain = get_provider()
     hits, queries = _retrieve(problem, car, brain, per_query=5, final=settings.interview_chunk_count())
-    if not manual_covers(hits):
+    if not covers(problem, car, hits, brain):
         emit("search", "No good match in the manual. Declining instead of guessing.")
         return {"diagnosis": NOT_FOUND_MESSAGE, "questions_asked": 0, "sources": [],
                 "total_cache_read_tokens": 0}
@@ -149,7 +149,7 @@ class DiagnosisSession:
         self.brain = get_provider()
         self.hits, _ = _retrieve(problem, car, self.brain, per_query=5,
                                  final=settings.interview_chunk_count())
-        self.covered = manual_covers(self.hits)
+        self.covered = covers(problem, car, self.hits, self.brain)
         if not self.covered:
             self.hits = []  # nothing worth citing or illustrating
         self.system = INTERVIEW_SYSTEM.format(context=build_context(problem, car, self.hits)) if self.covered else ""
