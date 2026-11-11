@@ -9,10 +9,16 @@ say so and ask for more detail, before any model call.
 On the eval set a threshold of 0.1 stops 28 of 30 unanswerable questions. It also
 stops 17 of 112 answerable ones, most of them one-line complaints such as
 "My Patrol won't start", which need more detail anyway.
+
+A low score cannot tell a vague complaint about a part this car has from a question
+about a part it does not have. So a question the score would decline gets a second
+look (see subject.py): the model names the part, and the part is looked up in the manual.
 """
 from __future__ import annotations
 
+from ..ai.provider import AIProvider
 from ..config import settings
+from .subject import name_subject, subject_is_in_manual
 
 NOT_FOUND_MESSAGE = (
     "I could not match this to a page in the manual for this car, so I am not going to "
@@ -38,3 +44,17 @@ def manual_covers(hits: list[dict]) -> bool:
     if not scores:
         return True
     return max(scores) >= settings.gate_min_score
+
+
+def covers(problem: str, car: str, hits: list[dict], brain: AIProvider) -> bool:
+    """True if the brain should go on to reason about this question.
+
+    A good page match is enough. Without one, the question still goes ahead if the
+    part it is about appears in the manual. That costs one short model call, and only
+    for questions that would otherwise be declined.
+    """
+    if manual_covers(hits):
+        return True
+    if not hits or settings.gate_subject_min_score <= 0:
+        return False
+    return subject_is_in_manual(name_subject(problem, brain), car)

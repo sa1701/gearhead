@@ -32,6 +32,9 @@ class Settings:
     rerank_pool: int = int(os.getenv("GEARHEAD_RERANK_POOL", "40"))  # candidates read by the reranker
     # Below this best rerank score the brain declines instead of guessing. 0 switches the gate off.
     gate_min_score: float = float(os.getenv("GEARHEAD_GATE_MIN_SCORE", "0.1"))
+    # A question under that score still goes ahead if the part it is about scores at
+    # least this against the manual. 0 switches this second look off.
+    gate_subject_min_score: float = float(os.getenv("GEARHEAD_GATE_SUBJECT_MIN_SCORE", "0.5"))
     # Manual chunks the interview reasons over. Unset = pick by brain (see interview_chunk_count).
     interview_chunks: str | None = os.getenv("GEARHEAD_INTERVIEW_CHUNKS")
 
