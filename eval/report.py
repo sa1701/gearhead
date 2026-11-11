@@ -182,6 +182,12 @@ def subject_summary(rows: list[dict]) -> dict:
     return summary
 
 
+SUBJECT_RUNS = (
+    ("subject", "Subject check: a second look at questions the score would decline"),
+    ("subject_holdout", "Subject check on held-out questions (written after the thresholds were set)"),
+)
+
+
 def _count_cell(result: dict) -> str:
     return f"{_pct(result['rate'])} ({result['successes']} of {result['n']})"
 
@@ -290,10 +296,12 @@ def to_markdown(summary: dict) -> str:
                        followup["unanswerable_declined"]),
             "",
         ]
-    subject = summary.get("subject")
-    if subject:
+    for key, title in SUBJECT_RUNS:
+        subject = summary.get(key)
+        if not subject:
+            continue
         lines += [
-            "## Subject check: a second look at questions the score would decline", "",
+            f"## {title}", "",
             "| Question type | Declined by score alone | Declined with the subject check |", "|---|---|---|",
         ]
         lines += [f"| {label} | {_count_cell(subject[kind]['score_only'])} | "
@@ -333,9 +341,10 @@ def build_summary() -> dict:
     vague = vague_summary(read_results(RESULTS_DIR / "retrieval_vague.jsonl"))
     if vague:
         summary["vague"] = vague
-    subject = subject_summary(read_results(RESULTS_DIR / "gate_subject.jsonl"))
-    if subject:
-        summary["subject"] = subject
+    for key, name in (("subject", "gate_subject"), ("subject_holdout", "gate_subject_holdout")):
+        subject = subject_summary(read_results(RESULTS_DIR / f"{name}.jsonl"))
+        if subject:
+            summary[key] = subject
     gate = gate_summary(read_results(RESULTS_DIR / "gate.jsonl"), read_results(RESULTS_DIR / "grounding.jsonl"))
     if gate:
         summary["gate"] = gate

@@ -6,6 +6,7 @@ in the gold set. No model call, so it runs in a few minutes.
 Run:  python -m eval.gate_eval             # one-shot gate on the main question set
       python -m eval.gate_eval followup    # the interview flow: ask once, search again
       python -m eval.gate_eval subject     # the subject check. One short model call per declined question
+      python -m eval.gate_eval subject holdout   # the same, on questions never used for tuning
 """
 from __future__ import annotations
 
@@ -18,12 +19,14 @@ from src.brain.subject import name_subject, subject_score
 from src.config import settings
 
 from .metrics import first_system_rank
-from .store import CAR, RESULTS_DIR, append_jsonl, load_followups, load_gold, load_vague, pending
+from .store import (CAR, RESULTS_DIR, append_jsonl, load_followups, load_gold, load_holdout,
+                    load_vague, pending)
 
 ONE_SHOT_CHUNKS = 6
 OUT = RESULTS_DIR / "gate.jsonl"
 OUT_FOLLOWUP = RESULTS_DIR / "gate_followup.jsonl"
 OUT_SUBJECT = RESULTS_DIR / "gate_subject.jsonl"
+OUT_SUBJECT_HOLDOUT = RESULTS_DIR / "gate_subject_holdout.jsonl"
 
 
 def run(limit: int | None = None, car: str = CAR) -> None:
@@ -78,7 +81,13 @@ def run_followup(car: str = CAR) -> None:
         print(f"  {i}/{len(todo)} {row['id']}")
 
 
-def run_subject(car: str = CAR) -> None:
+def _tuning_questions(car: str) -> list[dict]:
+    questions = [{**r, "kind": "answerable"} for r in load_gold(car, answerable=True)]
+    questions += [{**r, "kind": "vague"} for r in load_vague(car)]
+    return questions + [{**r, "kind": "unanswerable"} for r in load_gold(car, answerable=False)]
+
+
+def run_subject(car: str = CAR, holdout: bool = False) -> None:
     """Run the gate with its second look on every question: specific symptoms, vague
     complaints and unanswerable ones. Only questions the score declines reach the model.
 
@@ -89,12 +98,10 @@ def run_subject(car: str = CAR) -> None:
         raise SystemExit("The gate reads reranker scores; unset GEARHEAD_RETRIEVAL to score it.")
     if settings.gate_subject_min_score <= 0:
         raise SystemExit("The subject check is switched off (GEARHEAD_GATE_SUBJECT_MIN_SCORE is 0).")
-    questions = [{**r, "kind": "answerable"} for r in load_gold(car, answerable=True)]
-    questions += [{**r, "kind": "vague"} for r in load_vague(car)]
-    questions += [{**r, "kind": "unanswerable"} for r in load_gold(car, answerable=False)]
-    todo = pending(questions, OUT_SUBJECT)
+    out = OUT_SUBJECT_HOLDOUT if holdout else OUT_SUBJECT
+    todo = pending(load_holdout(car) if holdout else _tuning_questions(car), out)
     print(f"Subject check eval (threshold {settings.gate_subject_min_score}): "
-          f"{len(todo)} questions -> {OUT_SUBJECT}")
+          f"{len(todo)} questions -> {out}")
     brain = get_provider()
 
     for i, row in enumerate(todo, 1):
@@ -104,9 +111,10 @@ def run_subject(car: str = CAR) -> None:
         if blocked_by_score:
             subject = name_subject(row["question"], brain)
             score = round(subject_score(subject, car), 4)
-        append_jsonl(OUT_SUBJECT, {
+        append_jsonl(out, {
             "id": row["id"],
             "kind": row["kind"],
+            "top_score": max((h.get("rerank_score", 1.0) for h in hits), default=0.0),
             "blocked_by_score": blocked_by_score,
             "subject": subject,
             "subject_score": score,
@@ -119,7 +127,7 @@ def run_subject(car: str = CAR) -> None:
 if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")
     if "subject" in sys.argv[1:]:
-        run_subject()
+        run_subject(holdout="holdout" in sys.argv[1:])
     elif "followup" in sys.argv[1:]:
         run_followup()
     else:

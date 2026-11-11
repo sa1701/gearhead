@@ -272,3 +272,10 @@ def test_report_shows_the_subject_check_table():
 
     assert "## Subject check" in report
     assert "| No answer in manual | 67% (2 of 3) | 33% (1 of 3) |" in report
+
+
+def test_report_shows_the_held_out_subject_check_under_its_own_heading():
+    report = to_markdown({"subject_holdout": subject_summary(SUBJECT_ROWS)})
+
+    assert "## Subject check on held-out questions" in report
+    assert "| Vague complaint | 100% (2 of 2) | 50% (1 of 2) |" in report
