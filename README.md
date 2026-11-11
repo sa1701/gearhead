@@ -47,14 +47,14 @@ It runs locally. In Claude mode the only thing that leaves your machine is the c
 **Pipeline**
 1. **Ingest** — service-manual PDFs are parsed (PyMuPDF), chunked, embedded, and stored in a local Chroma vector database (22 Patrol manuals → ~2,450 indexed chunks).
 2. **Retrieve** — a wide vector search over the manuals, then a small local cross-encoder re-reads the question against each candidate and puts the best pages first.
-3. **Gate** — if no manual page is a good match, GEARHEAD says so and asks for more detail instead of calling the model.
+3. **Gate** — if no manual page is a good match, GEARHEAD says so and asks for more detail instead of guessing. A vague complaint gets a second look first: the model names the part it is about, and the question goes ahead if the manual covers that part.
 4. **Interview** — the model asks the smartest next question to narrow the diagnosis, looping until it's confident.
 5. **Diagnose** — it returns a cited fix: steps + the rendered manual diagram + source page.
 
 **Engineering highlights**
 - **Swappable model interface** (`AIProvider`) — the underlying LLM is pluggable behind a clean interface: the cloud Claude API (vision + prompt caching) or a fully local Ollama model, switched with a single env var.
 - **Prompt caching** across the system + retrieved-context block cuts repeated per-turn token cost by ~90%.
-- **Measured, not assumed.** An evaluation harness (`eval/`) scores retrieval, citation grounding and refusals on 142 questions. It showed the original query-expansion step was hurting page retrieval (41% in the top 6), and that reranking lifts it to 69%. It also showed the local model writing repair steps for parts the car does not have, which led to a coverage gate that stops 93% of those questions before the model is called. See [eval/README.md](eval/README.md).
+- **Measured, not assumed.** An evaluation harness (`eval/`) scores retrieval, citation grounding and refusals on 142 questions. It showed the original query-expansion step was hurting page retrieval (41% in the top 6), and that reranking lifts it to 69%. It also showed the local model writing repair steps for parts the car does not have, which led to a coverage gate that stops 26 of 30 of those questions, while wrongly declining 8 of 160 real ones. See [eval/README.md](eval/README.md).
 - **End-to-end tested** via FastAPI's `TestClient` (full flow + diagram serving).
 
 ---

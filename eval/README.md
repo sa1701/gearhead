@@ -169,10 +169,44 @@ Two cheaper rules were tested on the same data and neither separates the two cas
 
 What this means: the reranker score measures whether the text matches a page. It
 does not measure whether the car has the part. Telling "vague but covered" from
-"not on this car" needs a reader that understands the question, so the next thing
-to test is a narrow model check ("is the thing being asked about mentioned in these
-excerpts?") in front of the diagnosis. Until that is measured, the app keeps the
-simple rule: no good match, no guess.
+"not on this car" needs a reader that understands the question.
+
+### The subject check
+
+The local model is poor at judging whether the manual covers a question, so it is
+not asked to. It is asked one small thing: name the part or feature the question is
+about, in workshop wording ("turn key and just a click" becomes "starting system").
+That name is then looked up in the manual with the same search and reranker. If the
+part has a good match (0.5 or more), the question goes ahead. The model names the
+part; the manual lookup makes the decision.
+
+This runs only for questions the score would decline, and takes about 2 seconds on
+a laptop CPU. `python -m eval.gate_eval subject` runs it on all 190 questions:
+
+| Question type | Declined by score alone | Declined with the subject check |
+|---|---|---|
+| No answer in manual (should be declined) | 27 of 30 | 26 of 30 |
+| Specific symptom, answer in manual | 17 of 112 | 5 of 112 |
+| Vague complaint | 29 of 48 | 3 of 48 |
+
+Wrongly declined questions drop from 46 to 8. The cost is one more unanswerable
+question getting through: "rear parking sensors", because the manual has pages that
+mention sensors and parking. The three vague complaints still declined are ones
+where the model could not name a part ("shudder through floor").
+
+Read these numbers with care:
+
+- The 0.5 threshold was chosen on these same 190 questions. In the first pass three
+  unanswerable subjects scored 0.44 to 0.47, just under it. A fresh set of questions
+  would be a fairer test.
+- The two questions that already beat the score gate (auto start-stop, and valve
+  clearances for a different make of car) are not caught by this check either. The
+  model was asked to name a different vehicle in the subject and did not.
+- One question sits on the score threshold: it scored 0.090 in the earlier gate run
+  and 0.108 in this one, so "declined by score alone" is 27 here and 28 above. The
+  cause of the change has not been found.
+- An owner can get past the gate by naming a real part. The answer they then get is
+  still built only from manual pages.
 
 ## Grounding and refusal results
 
@@ -216,6 +250,7 @@ python -m eval.retrieval_eval rerank   # the rerank pipeline. No model call
 python -m eval.gate_eval               # the coverage gate. No model call
 python -m eval.retrieval_eval vague    # vague complaints, scored by system. No model call
 python -m eval.gate_eval followup      # ask-once-then-search-again replay. No model call
+python -m eval.gate_eval subject       # the subject check. One short model call per declined question
 python -m eval.grounding_eval          # hours on a laptop CPU, resumes if stopped
 python -m eval.report              # writes results/summary.json and results/REPORT.md
 pytest                             # unit tests for the scoring code
