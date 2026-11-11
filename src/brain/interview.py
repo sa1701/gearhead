@@ -11,7 +11,7 @@ from typing import Callable
 from ..ai import get_provider
 from ..config import settings
 from .diagnose import _retrieve, build_context
-from .gate import DETAIL_PROMPT, NOT_FOUND_MESSAGE, manual_covers
+from .gate import NOT_FOUND_MESSAGE, manual_covers
 
 INTERVIEW_SYSTEM = """You are GEARHEAD, a master automotive technician guiding a
 capable DIYer through a diagnosis, like a real mechanic standing next to them.
@@ -71,10 +71,6 @@ def run_interview(
 
     brain = get_provider()
     hits, queries = _retrieve(problem, car, brain, per_query=5, final=settings.interview_chunk_count())
-    if not manual_covers(hits):
-        emit("question", DETAIL_PROMPT)
-        problem = f"{problem}. {ask_fn(DETAIL_PROMPT)}"
-        hits, queries = _retrieve(problem, car, brain, per_query=5, final=settings.interview_chunk_count())
     if not manual_covers(hits):
         emit("search", "No good match in the manual. Declining instead of guessing.")
         return {"diagnosis": NOT_FOUND_MESSAGE, "questions_asked": 0, "sources": [],
@@ -151,20 +147,15 @@ class DiagnosisSession:
         self.car = car
         self.max_questions = max_questions
         self.brain = get_provider()
+        self.hits, _ = _retrieve(problem, car, self.brain, per_query=5,
+                                 final=settings.interview_chunk_count())
+        self.covered = manual_covers(self.hits)
+        if not self.covered:
+            self.hits = []  # nothing worth citing or illustrating
+        self.system = INTERVIEW_SYSTEM.format(context=build_context(problem, car, self.hits)) if self.covered else ""
+        self.messages = [{"role": "user", "content": f"PROBLEM: {problem}"}]
         self.questions_asked = 0
         self.done = False
-        self.awaiting_detail = False
-        self._load_manual()
-
-    def _load_manual(self) -> None:
-        """Search the manual for the problem as it stands and set up the conversation."""
-        hits, _ = _retrieve(self.problem, self.car, self.brain, per_query=5,
-                            final=settings.interview_chunk_count())
-        self.covered = manual_covers(hits)
-        self.hits = hits if self.covered else []  # a weak match is not worth citing or illustrating
-        self.system = (INTERVIEW_SYSTEM.format(context=build_context(self.problem, self.car, self.hits))
-                       if self.covered else "")
-        self.messages = [{"role": "user", "content": f"PROBLEM: {self.problem}"}]
 
     def sources(self) -> list[dict]:
         seen, out = set(), []
@@ -203,17 +194,8 @@ class DiagnosisSession:
         }
 
     def start(self) -> dict:
-        if not self.covered:
-            # One clarifying round that costs no model call: more detail often finds the page.
-            self.awaiting_detail = True
-            return {"type": "question", "text": DETAIL_PROMPT, "questions_asked": 0}
         return self._turn()
 
     def answer(self, user_answer: str) -> dict:
-        if self.awaiting_detail:
-            self.awaiting_detail = False
-            self.problem = f"{self.problem}. {user_answer}"
-            self._load_manual()
-            return self._turn()
         self.messages.append({"role": "user", "content": user_answer})
         return self._turn(force=self.questions_asked >= self.max_questions)
