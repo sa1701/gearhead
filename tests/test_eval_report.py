@@ -7,6 +7,7 @@ from eval.report import (
     grounding_summary,
     merge_by_id,
     retrieval_summary,
+    subject_summary,
     to_markdown,
     vague_summary,
 )
@@ -237,3 +238,37 @@ def test_markdown_report_has_a_row_per_search_mode():
 
     assert "| raw | 100% |" in report
     assert "| expanded | 0% |" in report
+
+
+SUBJECT_ROWS = [
+    {"id": "a-1", "kind": "answerable", "blocked_by_score": False, "blocked": False},
+    {"id": "a-2", "kind": "answerable", "blocked_by_score": True, "blocked": False},
+    {"id": "v-1", "kind": "vague", "blocked_by_score": True, "blocked": False},
+    {"id": "v-2", "kind": "vague", "blocked_by_score": True, "blocked": True},
+    {"id": "u-1", "kind": "unanswerable", "blocked_by_score": True, "blocked": True},
+    {"id": "u-2", "kind": "unanswerable", "blocked_by_score": True, "blocked": False},
+    {"id": "u-3", "kind": "unanswerable", "blocked_by_score": False, "blocked": False},
+]
+
+
+def test_subject_summary_reports_each_kind_before_and_after_the_subject_check():
+    summary = subject_summary(SUBJECT_ROWS)
+
+    assert summary["answerable"]["score_only"]["rate"] == 0.5
+    assert summary["answerable"]["with_subject_check"]["rate"] == 0.0
+    assert summary["vague"]["score_only"]["rate"] == 1.0
+    assert summary["vague"]["with_subject_check"]["rate"] == 0.5
+    assert summary["unanswerable"]["score_only"]["successes"] == 2
+    assert summary["unanswerable"]["with_subject_check"]["successes"] == 1
+    assert summary["unanswerable"]["with_subject_check"]["n"] == 3
+
+
+def test_subject_summary_of_no_rows_is_empty():
+    assert subject_summary([]) == {}
+
+
+def test_report_shows_the_subject_check_table():
+    report = to_markdown({"subject": subject_summary(SUBJECT_ROWS)})
+
+    assert "## Subject check" in report
+    assert "| No answer in manual | 67% (2 of 3) | 33% (1 of 3) |" in report

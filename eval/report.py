@@ -156,6 +156,36 @@ def followup_summary(rows: list[dict]) -> dict:
     }
 
 
+SUBJECT_KINDS = (
+    ("unanswerable", "No answer in manual"),
+    ("answerable", "Answer in manual, specific symptom"),
+    ("vague", "Vague complaint"),
+)
+
+
+def _declined(rows: list[dict], field: str) -> dict:
+    count = sum(bool(r[field]) for r in rows)
+    return {**_rate(count, len(rows)), "successes": count}
+
+
+def subject_summary(rows: list[dict]) -> dict:
+    """How many questions of each kind are declined, by the score alone and after the
+    subject check gives the declined ones a second look."""
+    if not rows:
+        return {}
+    summary = {}
+    for kind, _ in SUBJECT_KINDS:
+        of_kind = [r for r in rows if r["kind"] == kind]
+        if of_kind:
+            summary[kind] = {"score_only": _declined(of_kind, "blocked_by_score"),
+                             "with_subject_check": _declined(of_kind, "blocked")}
+    return summary
+
+
+def _count_cell(result: dict) -> str:
+    return f"{_pct(result['rate'])} ({result['successes']} of {result['n']})"
+
+
 VAGUE_MODES = ("raw", "rerank")
 
 
@@ -260,6 +290,16 @@ def to_markdown(summary: dict) -> str:
                        followup["unanswerable_declined"]),
             "",
         ]
+    subject = summary.get("subject")
+    if subject:
+        lines += [
+            "## Subject check: a second look at questions the score would decline", "",
+            "| Question type | Declined by score alone | Declined with the subject check |", "|---|---|---|",
+        ]
+        lines += [f"| {label} | {_count_cell(subject[kind]['score_only'])} | "
+                  f"{_count_cell(subject[kind]['with_subject_check'])} |"
+                  for kind, label in SUBJECT_KINDS if kind in subject]
+        lines.append("")
     gate = summary.get("gate")
     if gate:
         lines += [
@@ -293,6 +333,9 @@ def build_summary() -> dict:
     vague = vague_summary(read_results(RESULTS_DIR / "retrieval_vague.jsonl"))
     if vague:
         summary["vague"] = vague
+    subject = subject_summary(read_results(RESULTS_DIR / "gate_subject.jsonl"))
+    if subject:
+        summary["subject"] = subject
     gate = gate_summary(read_results(RESULTS_DIR / "gate.jsonl"), read_results(RESULTS_DIR / "grounding.jsonl"))
     if gate:
         summary["gate"] = gate

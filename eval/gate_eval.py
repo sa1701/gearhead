@@ -5,13 +5,16 @@ in the gold set. No model call, so it runs in a few minutes.
 
 Run:  python -m eval.gate_eval             # one-shot gate on the main question set
       python -m eval.gate_eval followup    # the interview flow: ask once, search again
+      python -m eval.gate_eval subject     # the subject check. One short model call per declined question
 """
 from __future__ import annotations
 
 import sys
 
+from src.ai import get_provider
 from src.brain.diagnose import _retrieve
 from src.brain.gate import manual_covers
+from src.brain.subject import name_subject, subject_score
 from src.config import settings
 
 from .metrics import first_system_rank
@@ -20,6 +23,7 @@ from .store import CAR, RESULTS_DIR, append_jsonl, load_followups, load_gold, lo
 ONE_SHOT_CHUNKS = 6
 OUT = RESULTS_DIR / "gate.jsonl"
 OUT_FOLLOWUP = RESULTS_DIR / "gate_followup.jsonl"
+OUT_SUBJECT = RESULTS_DIR / "gate_subject.jsonl"
 
 
 def run(limit: int | None = None, car: str = CAR) -> None:
@@ -74,9 +78,49 @@ def run_followup(car: str = CAR) -> None:
         print(f"  {i}/{len(todo)} {row['id']}")
 
 
+def run_subject(car: str = CAR) -> None:
+    """Run the gate with its second look on every question: specific symptoms, vague
+    complaints and unanswerable ones. Only questions the score declines reach the model.
+
+    This repeats the steps of gate.covers with the app's own functions, so that the
+    subject and its score can be recorded for each question.
+    """
+    if settings.retrieval != "rerank":
+        raise SystemExit("The gate reads reranker scores; unset GEARHEAD_RETRIEVAL to score it.")
+    if settings.gate_subject_min_score <= 0:
+        raise SystemExit("The subject check is switched off (GEARHEAD_GATE_SUBJECT_MIN_SCORE is 0).")
+    questions = [{**r, "kind": "answerable"} for r in load_gold(car, answerable=True)]
+    questions += [{**r, "kind": "vague"} for r in load_vague(car)]
+    questions += [{**r, "kind": "unanswerable"} for r in load_gold(car, answerable=False)]
+    todo = pending(questions, OUT_SUBJECT)
+    print(f"Subject check eval (threshold {settings.gate_subject_min_score}): "
+          f"{len(todo)} questions -> {OUT_SUBJECT}")
+    brain = get_provider()
+
+    for i, row in enumerate(todo, 1):
+        hits, _ = _retrieve(row["question"], car, brain=None, final=ONE_SHOT_CHUNKS)
+        blocked_by_score = not manual_covers(hits)
+        subject, score = None, None
+        if blocked_by_score:
+            subject = name_subject(row["question"], brain)
+            score = round(subject_score(subject, car), 4)
+        append_jsonl(OUT_SUBJECT, {
+            "id": row["id"],
+            "kind": row["kind"],
+            "blocked_by_score": blocked_by_score,
+            "subject": subject,
+            "subject_score": score,
+            "blocked": blocked_by_score and score < settings.gate_subject_min_score,
+            "threshold": settings.gate_subject_min_score,
+        })
+        print(f"  {i}/{len(todo)} {row['id']} {subject or ''}")
+
+
 if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")
-    if "followup" in sys.argv[1:]:
+    if "subject" in sys.argv[1:]:
+        run_subject()
+    elif "followup" in sys.argv[1:]:
         run_followup()
     else:
         numbers = [a for a in sys.argv[1:] if a.isdigit()]
