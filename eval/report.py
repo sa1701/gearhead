@@ -160,6 +160,7 @@ SUBJECT_KINDS = (
     ("unanswerable", "No answer in manual"),
     ("answerable", "Answer in manual, specific symptom"),
     ("vague", "Vague complaint"),
+    ("on_car", "About this car, mentions other brands or places"),
 )
 
 
@@ -185,6 +186,34 @@ def subject_summary(rows: list[dict]) -> dict:
 SUBJECT_RUNS = (
     ("subject", "Subject check: a second look at questions the score would decline"),
     ("subject_holdout", "Subject check on held-out questions (written after the thresholds were set)"),
+)
+
+
+def vehicle_summary(vehicle_rows: list[dict], subject_rows: list[dict]) -> dict:
+    """Per question kind: declined by the gate as it was, and once the other-vehicle
+    check runs first. subject_rows hold the earlier gate's decisions ("blocked");
+    questions with no subject row (the vehicle set) count only the vehicle check."""
+    if not vehicle_rows:
+        return {}
+    before = {r["id"]: bool(r["blocked"]) for r in subject_rows}
+    summary = {}
+    for kind, _ in SUBJECT_KINDS:
+        of_kind = [r for r in vehicle_rows if r["kind"] == kind]
+        if not of_kind:
+            continue
+        rows = [{"was": before.get(r["id"]), "now": bool(r["named"]) or bool(before.get(r["id"]))}
+                for r in of_kind]
+        summary[kind] = {"named_another_vehicle": _declined([{"x": r["named"]} for r in of_kind], "x"),
+                         "with_vehicle_check": _declined(rows, "now")}
+        if all(r["was"] is not None for r in rows):
+            summary[kind]["before"] = _declined(rows, "was")
+    return summary
+
+
+VEHICLE_SETS = (
+    ("tuning", "the tuning questions"),
+    ("holdout", "the held-out questions"),
+    ("vehicles", "questions written after the name list was frozen"),
 )
 
 
@@ -308,6 +337,21 @@ def to_markdown(summary: dict) -> str:
                   f"{_count_cell(subject[kind]['with_subject_check'])} |"
                   for kind, label in SUBJECT_KINDS if kind in subject]
         lines.append("")
+    for set_name, title in VEHICLE_SETS:
+        vehicles = summary.get(f"vehicles_{set_name}")
+        if not vehicles:
+            continue
+        lines += [
+            f"## Other-vehicle check: {title}", "",
+            "| Question type | Declined before | Names another vehicle | Declined with the check |",
+            "|---|---|---|---|",
+        ]
+        lines += [f"| {label} | "
+                  f"{_count_cell(vehicles[kind]['before']) if 'before' in vehicles[kind] else 'not run'} | "
+                  f"{_count_cell(vehicles[kind]['named_another_vehicle'])} | "
+                  f"{_count_cell(vehicles[kind]['with_vehicle_check'])} |"
+                  for kind, label in SUBJECT_KINDS if kind in vehicles]
+        lines.append("")
     gate = summary.get("gate")
     if gate:
         lines += [
@@ -341,10 +385,18 @@ def build_summary() -> dict:
     vague = vague_summary(read_results(RESULTS_DIR / "retrieval_vague.jsonl"))
     if vague:
         summary["vague"] = vague
+    subject_rows = {}
     for key, name in (("subject", "gate_subject"), ("subject_holdout", "gate_subject_holdout")):
-        subject = subject_summary(read_results(RESULTS_DIR / f"{name}.jsonl"))
+        subject_rows[key] = read_results(RESULTS_DIR / f"{name}.jsonl")
+        subject = subject_summary(subject_rows[key])
         if subject:
             summary[key] = subject
+    vehicle_rows = read_results(RESULTS_DIR / "gate_vehicles.jsonl")
+    earlier = {"tuning": subject_rows["subject"], "holdout": subject_rows["subject_holdout"], "vehicles": []}
+    for set_name, _ in VEHICLE_SETS:
+        vehicles = vehicle_summary([r for r in vehicle_rows if r.get("set") == set_name], earlier[set_name])
+        if vehicles:
+            summary[f"vehicles_{set_name}"] = vehicles
     gate = gate_summary(read_results(RESULTS_DIR / "gate.jsonl"), read_results(RESULTS_DIR / "grounding.jsonl"))
     if gate:
         summary["gate"] = gate

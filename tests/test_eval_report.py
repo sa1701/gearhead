@@ -8,6 +8,7 @@ from eval.report import (
     merge_by_id,
     retrieval_summary,
     subject_summary,
+    vehicle_summary,
     to_markdown,
     vague_summary,
 )
@@ -279,3 +280,43 @@ def test_report_shows_the_held_out_subject_check_under_its_own_heading():
 
     assert "## Subject check on held-out questions" in report
     assert "| Vague complaint | 100% (2 of 2) | 50% (1 of 2) |" in report
+
+
+VEHICLE_ROWS = [
+    {"id": "u-1", "set": "holdout", "kind": "unanswerable", "named": None},
+    {"id": "u-2", "set": "holdout", "kind": "unanswerable", "named": "civic"},
+    {"id": "u-3", "set": "holdout", "kind": "unanswerable", "named": "hilux"},
+    {"id": "a-1", "set": "holdout", "kind": "answerable", "named": None},
+    {"id": "a-2", "set": "holdout", "kind": "answerable", "named": "golf"},
+]
+EARLIER = [
+    {"id": "u-1", "blocked": True}, {"id": "u-2", "blocked": False}, {"id": "u-3", "blocked": True},
+    {"id": "a-1", "blocked": False}, {"id": "a-2", "blocked": False},
+]
+
+
+def test_vehicle_summary_adds_the_check_on_top_of_the_earlier_decisions():
+    summary = vehicle_summary(VEHICLE_ROWS, EARLIER)
+
+    assert summary["unanswerable"]["before"]["successes"] == 2
+    assert summary["unanswerable"]["named_another_vehicle"]["successes"] == 2
+    assert summary["unanswerable"]["with_vehicle_check"]["successes"] == 3
+    assert summary["answerable"]["with_vehicle_check"]["successes"] == 1
+
+
+def test_vehicle_summary_without_earlier_decisions_counts_only_the_check():
+    summary = vehicle_summary(VEHICLE_ROWS, [])
+
+    assert "before" not in summary["unanswerable"]
+    assert summary["unanswerable"]["with_vehicle_check"]["successes"] == 2
+
+
+def test_vehicle_summary_of_no_rows_is_empty():
+    assert vehicle_summary([], EARLIER) == {}
+
+
+def test_report_marks_a_set_with_no_earlier_run():
+    report = to_markdown({"vehicles_vehicles": vehicle_summary(VEHICLE_ROWS, [])})
+
+    assert "## Other-vehicle check: questions written after the name list was frozen" in report
+    assert "| No answer in manual | not run | 67% (2 of 3) | 67% (2 of 3) |" in report

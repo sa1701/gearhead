@@ -7,26 +7,30 @@ Run:  python -m eval.gate_eval             # one-shot gate on the main question 
       python -m eval.gate_eval followup    # the interview flow: ask once, search again
       python -m eval.gate_eval subject     # the subject check. One short model call per declined question
       python -m eval.gate_eval subject holdout   # the same, on questions never used for tuning
+      python -m eval.gate_eval vehicles    # the other-vehicle check on every question set. No model call
 """
 from __future__ import annotations
 
+import json
 import sys
 
 from src.ai import get_provider
 from src.brain.diagnose import _retrieve
 from src.brain.gate import manual_covers
 from src.brain.subject import name_subject, subject_score
+from src.brain.vehicles import other_vehicle_named
 from src.config import settings
 
 from .metrics import first_system_rank
 from .store import (CAR, RESULTS_DIR, append_jsonl, load_followups, load_gold, load_holdout,
-                    load_vague, pending)
+                    load_vague, load_vehicle_set, pending)
 
 ONE_SHOT_CHUNKS = 6
 OUT = RESULTS_DIR / "gate.jsonl"
 OUT_FOLLOWUP = RESULTS_DIR / "gate_followup.jsonl"
 OUT_SUBJECT = RESULTS_DIR / "gate_subject.jsonl"
 OUT_SUBJECT_HOLDOUT = RESULTS_DIR / "gate_subject_holdout.jsonl"
+OUT_VEHICLES = RESULTS_DIR / "gate_vehicles.jsonl"
 
 
 def run(limit: int | None = None, car: str = CAR) -> None:
@@ -124,9 +128,30 @@ def run_subject(car: str = CAR, holdout: bool = False) -> None:
         print(f"  {i}/{len(todo)} {row['id']} {subject or ''}")
 
 
+def run_vehicles(car: str = CAR) -> None:
+    """Which questions in each set name a different vehicle. Rewritten in full each run,
+    since it takes a moment and the name list may change. Written to a temporary file
+    first, so a crash never leaves a half-written result that looks complete."""
+    sets = {"tuning": _tuning_questions(car), "holdout": load_holdout(car),
+            "vehicles": load_vehicle_set(car)}
+    empty = [name for name, questions in sets.items() if not questions]
+    if empty:
+        raise SystemExit(f"No questions found for: {', '.join(empty)}")
+    rows = [{"id": row["id"], "set": set_name, "kind": row["kind"],
+             "named": other_vehicle_named(row["question"], car)}
+            for set_name, questions in sets.items() for row in questions]
+    partial = OUT_VEHICLES.with_suffix(".partial")
+    partial.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows), encoding="utf-8")
+    partial.replace(OUT_VEHICLES)
+    for set_name, questions in sets.items():
+        print(f"  {set_name}: {len(questions)} questions")
+
+
 if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")
-    if "subject" in sys.argv[1:]:
+    if "vehicles" in sys.argv[1:]:
+        run_vehicles()
+    elif "subject" in sys.argv[1:]:
         run_subject(holdout="holdout" in sys.argv[1:])
     elif "followup" in sys.argv[1:]:
         run_followup()
