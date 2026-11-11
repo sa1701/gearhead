@@ -237,8 +237,39 @@ The gate is much weaker on fresh questions than the first set suggested:
   name the manual does not use ("handbrake", "headlights").
 - With 17, 9 and 11 questions these counts are rough, but the direction is clear.
 
-The next fix to test is a check for another make or model named in the question,
-before the score is read at all. The held-out set must not be used to tune it.
+### The other-vehicle check
+
+A question that names another make or model is now declined before the score is read
+(`src/brain/vehicles.py`, no model call). The name list was written and committed
+before any question was written to test it. It leaves out everyday English words
+("outback", "discovery") and names the Patrol manual already uses ("D max", "BT 50").
+
+`gold/vehicles-nissan-patrol-y61.jsonl` holds 51 questions written afterwards by a
+separate model that had not seen the list: 24 about another vehicle, typed the way
+owners in Australia and the Gulf type them, and 27 about the Patrol that mention a
+brand, a place, or another car in passing. `python -m eval.gate_eval vehicles` runs the
+check on every set. No model call.
+
+| Set | Other-vehicle questions caught | Questions about this car wrongly declined |
+|---|---|---|
+| 190 tuning questions | 2 of 2 | 0 of 160 |
+| 37 held-out questions | 5 of 5 | 0 of 20 |
+| 51 questions written after the list was frozen | 15 of 24 | 3 of 27 |
+
+On the held-out set the gate as a whole now declines 14 of 17 unanswerable questions,
+up from 10, with no new wrong declines.
+
+What the fresh set showed:
+
+- **Nicknames and short forms get through.** "79 series", "lc200", "dmax", "bt50",
+  "mazda3" and "my mg" are not caught. Owners use these a lot.
+- **Other Patrol generations get through, 0 of 3.** "Y62" and "GQ patrol" share the
+  name Patrol with this car, so a name list cannot tell them apart.
+- **A passing mention declines a real question, 3 of 27.** "I towed my mate's Hilux
+  with my Patrol and now the clutch slips" is about the Patrol, and is declined.
+
+These three are the next problems to solve. Any fix has to be tested on questions
+written after it, not on this set.
 
 ## Grounding and refusal results
 
@@ -284,6 +315,7 @@ python -m eval.retrieval_eval vague    # vague complaints, scored by system. No 
 python -m eval.gate_eval followup      # ask-once-then-search-again replay. No model call
 python -m eval.gate_eval subject       # the subject check. One short model call per declined question
 python -m eval.gate_eval subject holdout   # the same, on 37 questions never used for tuning
+python -m eval.gate_eval vehicles      # the other-vehicle check on every question set. No model call
 python -m eval.grounding_eval          # hours on a laptop CPU, resumes if stopped
 python -m eval.report              # writes results/summary.json and results/REPORT.md
 pytest                             # unit tests for the scoring code
