@@ -57,6 +57,11 @@ def load_holdout(car: str = CAR) -> list[dict]:
     return read_jsonl(GOLD_DIR / f"holdout-{car}.jsonl")
 
 
+def load_vehicle_set(car: str = CAR) -> list[dict]:
+    """Questions written after the other-vehicle name list was frozen, to test that list."""
+    return read_jsonl(GOLD_DIR / f"vehicles-{car}.jsonl")
+
+
 def load_followups(car: str = CAR) -> dict[str, str]:
     """Question id -> what the owner says when asked for more detail."""
     path = GOLD_DIR / f"followups-{car}.json"
