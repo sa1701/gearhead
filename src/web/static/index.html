@@ -3,128 +3,119 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GEARHEAD — AI Diagnostics</title>
+  <title>GEARHEAD</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Chivo:wght@300;400;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/styles.css?v=8b" />
+  <script type="importmap">
+    { "imports": {
+        "three": "/static/vendor/three/three.module.min.js",
+        "three/addons/": "/static/vendor/three/addons/"
+    } }
+  </script>
 </head>
-<body>
-  <div class="grain"></div>
+<body data-screen="start">
+  <!-- the car, in 3D, behind everything -->
+  <canvas id="showroom" aria-hidden="true"></canvas>
+  <div class="scrim" aria-hidden="true"></div>
 
   <header class="topbar">
-    <div class="brand">
-      <span class="brand-mark">⛭</span>
-      <span class="brand-name">GEAR<span class="hot">HEAD</span></span>
-      <span class="brand-sub">AI&nbsp;DIAGNOSTICS</span>
-    </div>
+    <a class="wordmark" href="/" aria-label="GEARHEAD home">GEARHEAD</a>
     <div class="topbar-right">
-      <div class="engine-badge" id="engineBadge" title="The model doing the diagnosing">
-        <span class="led led-green"></span>
-        <span id="engineText">ENGINE&nbsp;—</span>
-      </div>
-      <div class="car-select">
-        <label for="carSelect">VEHICLE</label>
+      <span class="engine" id="engineBadge" title="The model doing the diagnosing">
+        <i class="dot"></i><span id="engineText">Ready</span>
+      </span>
+      <button class="quality" id="qualityBtn" type="button"></button>
+      <label class="car-select">
+        <span class="sr-only">Vehicle</span>
         <select id="carSelect"></select>
-      </div>
+      </label>
     </div>
   </header>
 
   <main>
-    <!-- SCREEN 1 — IGNITION -->
+    <!-- SCREEN 1: SHOWROOM -->
     <section id="screen-start" class="screen active">
-      <div class="ignition">
-        <div class="warn-strip" aria-hidden="true">
-          <span class="wl">🔋</span><span class="wl">🌡️</span><span class="wl lit">⚠️</span><span class="wl">🛢️</span><span class="wl">🔧</span>
+      <div class="intro">
+        <p class="eyebrow"><span id="carMake">NISSAN</span><i></i><span id="carCode">Y61 / GU</span></p>
+        <h1 class="headline">What is your <span id="carModel">Patrol</span> doing<span class="hot">?</span></h1>
+        <p class="tagline">Describe it in your own words. Every answer is backed by a page from the workshop manual.</p>
+      </div>
+
+      <div class="dock">
+        <div class="zone-row" id="zoneRow" role="group" aria-label="Where is the problem">
+          <button class="zone" data-zone="engine" data-fill="Engine cranks but won't start on cold mornings">Engine</button>
+          <button class="zone" data-zone="cooling" data-fill="Temperature gauge climbs to hot in traffic and there is a coolant smell">Cooling</button>
+          <button class="zone" data-zone="chassis" data-fill="Steering wheel shudders when braking from highway speed">Brakes</button>
+          <button class="zone" data-zone="driveline" data-fill="Whine from the rear diff on the overrun">Driveline</button>
+          <button class="zone" data-zone="electrical" data-fill="Battery light comes on and the headlights dim at idle">Electrics</button>
         </div>
-        <h1 class="headline">What's the <span class="hot">car</span> doing?</h1>
-        <p class="tagline">Describe the symptom in plain words, or punch in a fault code. GEARHEAD interviews you like a mechanic — and every fix is cited to the workshop manual.</p>
-
-        <textarea id="problemInput" rows="3" placeholder="e.g. shudders through the wheel when I brake at highway speed and pulls slightly left"></textarea>
-
-        <div class="preset-row" id="presetRow">
-          <button class="preset" data-fill="Steering wheel shudders when braking from highway speed">Brake shudder</button>
-          <button class="preset" data-fill="Engine cranks but won't start on cold mornings">Won't start cold</button>
-          <button class="preset" data-fill="Temperature gauge climbs to hot in traffic and coolant smell">Overheating</button>
-          <button class="preset" data-code="P0301">Code P0301</button>
+        <div class="ask">
+          <textarea id="problemInput" rows="1" placeholder="Describe the problem" aria-label="Describe the problem"></textarea>
+          <label class="code-field">
+            <span>OBD</span>
+            <input id="codeInput" type="text" maxlength="6" placeholder="P0301" aria-label="OBD fault code, optional" />
+          </label>
+          <button id="diagnoseBtn" class="go" aria-label="Start diagnosis">
+            <span class="go-text">Diagnose</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+          </button>
         </div>
+        <div class="start-error" id="startError" role="alert"></div>
+      </div>
 
-        <div class="code-row">
-          <span class="code-label">OBD&nbsp;CODE</span>
-          <input id="codeInput" type="text" maxlength="6" placeholder="P0301" />
-          <span class="code-hint">optional</span>
-        </div>
-
-        <button id="diagnoseBtn" class="ignition-btn" aria-label="Start diagnosis">
-          <span class="ring"></span>
-          <span class="ring ring-2"></span>
-          <span class="btn-inner">
-            <span class="btn-text">ENGINE<br/>START</span>
-            <span class="btn-sub">PUSH&nbsp;TO&nbsp;DIAGNOSE</span>
-          </span>
-        </button>
+      <div class="hero-foot">
+        <a class="credit" id="modelCredit" target="_blank" rel="noopener noreferrer"></a>
+        <div class="paint-row" id="paintRow" role="group" aria-label="Paint colour"></div>
+        <span class="drag-hint">Drag to rotate</span>
       </div>
     </section>
 
-    <!-- SCREEN 2 — INTERVIEW -->
+    <!-- SCREEN 2: INTERVIEW -->
     <section id="screen-interview" class="screen">
       <div class="cockpit">
-        <div class="cluster">
-          <div class="gauge-wrap">
-            <div id="gauge"></div>
-            <div class="gauge-caption">DIAGNOSTIC&nbsp;CONFIDENCE</div>
-          </div>
-          <div class="mini-row">
-            <div class="mini">
-              <div class="mini-num" id="miniQuestions">0</div>
-              <div class="mini-label">QUESTIONS</div>
-            </div>
-            <div class="mini">
-              <div class="mini-num" id="miniSources">—</div>
-              <div class="mini-label">MANUAL&nbsp;PAGES</div>
-            </div>
-          </div>
-          <div class="idiot-lights">
-            <span class="led led-green"></span><span class="il-label">LIBRARY</span>
-            <span class="led led-amber blink" id="ledScan"></span><span class="il-label">SCAN</span>
-          </div>
-        </div>
         <div class="chat-wrap">
-          <div class="console-head">
-            <span class="rec-dot"></span>
-            <span>DIAGNOSTIC&nbsp;CONSOLE</span>
-            <span class="console-live">LIVE</span>
+          <div class="panel-head">
+            <span>Diagnosis</span>
+            <span class="zone-tag" id="zoneTag"></span>
+            <i class="dot blink" id="ledScan"></i>
           </div>
           <div id="chatLog" class="chat-log"></div>
           <div class="answer-row">
-            <input id="answerInput" type="text" placeholder="Type your answer…" autocomplete="off" />
-            <button id="answerBtn" class="send-btn">SEND&nbsp;▸</button>
+            <input id="answerInput" type="text" placeholder="Your answer" autocomplete="off" aria-label="Your answer" />
+            <button id="answerBtn" class="go go-small" aria-label="Send answer">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+            </button>
           </div>
         </div>
+        <dl class="readout">
+          <div><dt>Confidence</dt><dd id="gauge"></dd></div>
+          <div><dt>Questions</dt><dd id="miniQuestions">0</dd></div>
+          <div><dt>Manual pages</dt><dd id="miniSources">—</dd></div>
+        </dl>
       </div>
     </section>
 
-    <!-- SCREEN 3 — THE FIX -->
+    <!-- SCREEN 3: THE FIX -->
     <section id="screen-fix" class="screen">
       <div class="fix-layout">
-        <div class="fix-main">
-          <div class="fix-head">
-            <span class="status-dot"></span>
-            <h2 id="fixTitle">WORK&nbsp;ORDER</h2>
-            <span class="wo-meta" id="woMeta"></span>
-          </div>
+        <article class="fix-main">
+          <header class="fix-head">
+            <p class="eyebrow"><span id="woMeta"></span></p>
+            <h2 id="fixTitle">Diagnosis</h2>
+          </header>
           <div id="fixBody" class="fix-body"></div>
           <div id="sources" class="sources"></div>
-          <div class="safety"><span class="hazard" aria-hidden="true"></span>⚠️ Always verify with a qualified professional before relying on this.</div>
-          <button id="resetBtn" class="reset-btn">◂ NEW&nbsp;DIAGNOSIS</button>
-        </div>
+          <p class="safety">Always verify with a qualified professional before relying on this.</p>
+          <button id="resetBtn" class="text-btn">New diagnosis</button>
+        </article>
         <aside class="fix-side">
-          <div class="gauge-wrap small">
-            <div id="gaugeFix"></div>
-            <div class="gauge-caption">CONFIDENCE</div>
-          </div>
+          <dl class="readout">
+            <div><dt>Confidence</dt><dd id="gaugeFix"></dd></div>
+          </dl>
           <div class="diagram-card">
-            <div class="diagram-head">MANUAL&nbsp;DIAGRAM <span class="diagram-hint">· click to enlarge ⤢</span></div>
+            <p class="diagram-head">From the manual</p>
             <div id="diagram" class="diagram"></div>
             <div id="diagramCaption" class="diagram-caption"></div>
           </div>
@@ -133,11 +124,19 @@
     </section>
   </main>
 
+  <p class="slow-note" id="slowNote" role="status"></p>
+
+  <div class="showroom-status" id="showroomStatus" aria-live="polite">
+    <span class="ss-text"></span>
+    <span class="ss-bar"><i></i></span>
+  </div>
+
   <div id="lightbox" class="lightbox">
-    <span class="lb-close">✕ CLOSE</span>
+    <span class="lb-close">Close</span>
     <img id="lbImg" src="" alt="manual page (full size)" />
   </div>
 
-  <script src="/static/app.js"></script>
+  <script type="module" src="/static/showroom.js?v=8b"></script>
+  <script src="/static/app.js?v=8b"></script>
 </body>
 </html>
