@@ -47,19 +47,32 @@ def _format_context(hits: list[dict]) -> str:
     )
 
 
+def _as_text(item: object) -> str:
+    """One Fix DB item as plain text. The Fix DB is model-extracted, so an item is
+    usually a string but is sometimes a {"name", "value", "unit"} object."""
+    if isinstance(item, dict) and "name" in item:
+        value = " ".join(str(item.get(key, "")).strip() for key in ("value", "unit")).strip()
+        return f"{item['name']} = {value}" if value else str(item["name"])
+    return str(item)
+
+
+def _join(items: list) -> str:
+    return "; ".join(_as_text(item) for item in items)
+
+
 def _format_fixes(fixes: list[dict]) -> str:
     if not fixes:
         return ""
     lines = []
     for f in fixes:
         pages = ", ".join(f"p.{p}" for p in f.get("pages", [])) or "p.?"
-        parts = [f"SYMPTOM: {f['symptom']}", "CAUSES: " + "; ".join(f.get("causes", []))]
+        parts = [f"SYMPTOM: {f['symptom']}", "CAUSES: " + _join(f.get("causes", []))]
         if f.get("checks"):
-            parts.append("CONFIRM: " + "; ".join(f["checks"]))
+            parts.append("CONFIRM: " + _join(f["checks"]))
         if f.get("fix"):
-            parts.append("FIX: " + "; ".join(f["fix"]))
+            parts.append("FIX: " + _join(f["fix"]))
         if f.get("specs"):
-            parts.append("SPECS: " + "; ".join(f["specs"]))
+            parts.append("SPECS: " + _join(f["specs"]))
         lines.append(f"- {' | '.join(parts)}  [{f.get('section', '?')}, {pages}]")
     return (
         "KNOWN FAILURE PATTERNS (pre-extracted from this car's manual — treat as "
