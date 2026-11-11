@@ -1,0 +1,71 @@
+"""Unit tests for the other-vehicle check: a Patrol manual does not answer Hilux questions."""
+import pytest
+
+from src.brain import gate, subject
+from src.brain.vehicles import other_vehicle_named
+from src.config import settings
+
+CAR = "nissan-patrol-y61"
+
+
+@pytest.mark.parametrize("question, name", [
+    ("How do I replace the timing belt on a Honda Civic 2008 1.8 petrol?", "civic"),
+    ("my hilux wont start after rain", "hilux"),
+    ("Clutch bleeding on a Land Rover Defender Td5?", "defender"),
+    ("head bolt torque for a VE commodore", "commodore"),
+    ("x-trail cvt shudder", "x trail"),
+    ("my Nissan Navara has a clunk from the rear", "navara"),
+])
+def test_names_another_vehicle(question, name):
+    assert other_vehicle_named(question, CAR) == name
+
+
+@pytest.mark.parametrize("question", [
+    "My Nissan Patrol Y61 overheats when towing",
+    "patrol idles rough at the lights",
+    "the brakes squeal when I stop",
+    "I fitted a Bosch battery and now the starter clicks",
+    "fuel gauge reads empty in the outback",
+    "the polonium seal",            # a model name inside a longer word does not count
+    "my patrol ran over a golfball",
+])
+def test_does_not_flag_questions_about_this_car(question):
+    assert other_vehicle_named(question, CAR) is None
+
+
+def test_a_model_of_the_same_make_counts_as_another_vehicle():
+    assert other_vehicle_named("Nissan Pathfinder timing chain noise", CAR) == "pathfinder"
+
+
+def test_the_loaded_car_decides_what_counts_as_another_vehicle():
+    assert other_vehicle_named("my hilux wont start", "toyota-hilux-n70") is None
+
+
+class _BrainThatMustNotBeCalled:
+    def complete(self, **kwargs):
+        raise AssertionError("the other-vehicle check needs no model call")
+
+
+def _hit(score: float) -> dict:
+    return {"text": "chunk", "section": "Engine", "page": 3, "source_file": "em.pdf",
+            "distance": 0.4, "rerank_score": score}
+
+
+def test_gate_declines_a_well_matched_question_about_another_vehicle(monkeypatch):
+    monkeypatch.setattr(settings, "gate_min_score", 0.1)
+
+    assert not gate.covers("timing belt on a Honda Civic", CAR, [_hit(0.95)], _BrainThatMustNotBeCalled())
+
+
+def test_gate_still_covers_a_well_matched_question_about_this_car(monkeypatch):
+    monkeypatch.setattr(settings, "gate_min_score", 0.1)
+
+    assert gate.covers("timing belt on my Patrol", CAR, [_hit(0.95)], _BrainThatMustNotBeCalled())
+
+
+def test_gate_skips_the_subject_check_for_another_vehicle(monkeypatch):
+    monkeypatch.setattr(settings, "gate_min_score", 0.1)
+    monkeypatch.setattr(settings, "gate_subject_min_score", 0.5)
+    monkeypatch.setattr(subject, "subject_score", lambda name, car: 0.99)
+
+    assert not gate.covers("hilux clutch slipping", CAR, [_hit(0.01)], _BrainThatMustNotBeCalled())
