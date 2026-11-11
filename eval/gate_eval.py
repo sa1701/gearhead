@@ -8,6 +8,7 @@ Run:  python -m eval.gate_eval             # one-shot gate on the main question 
       python -m eval.gate_eval subject     # the subject check. One short model call per declined question
       python -m eval.gate_eval subject holdout   # the same, on questions never used for tuning
       python -m eval.gate_eval vehicles    # the other-vehicle check on every question set. No model call
+      python -m eval.gate_eval passing     # the whole gate on questions that mention two vehicles
 """
 from __future__ import annotations
 
@@ -18,12 +19,13 @@ from src.ai import get_provider
 from src.brain.diagnose import _retrieve
 from src.brain.gate import manual_covers
 from src.brain.subject import name_subject, subject_score
+from src.brain import vehicles
 from src.brain.vehicles import other_vehicle_named
 from src.config import settings
 
 from .metrics import first_system_rank
 from .store import (CAR, RESULTS_DIR, append_jsonl, load_followups, load_gold, load_holdout,
-                    load_vague, load_vehicle_set, pending)
+                    load_passing_set, load_vague, load_vehicle_set, pending)
 
 ONE_SHOT_CHUNKS = 6
 OUT = RESULTS_DIR / "gate.jsonl"
@@ -31,6 +33,7 @@ OUT_FOLLOWUP = RESULTS_DIR / "gate_followup.jsonl"
 OUT_SUBJECT = RESULTS_DIR / "gate_subject.jsonl"
 OUT_SUBJECT_HOLDOUT = RESULTS_DIR / "gate_subject_holdout.jsonl"
 OUT_VEHICLES = RESULTS_DIR / "gate_vehicles.jsonl"
+OUT_PASSING = RESULTS_DIR / "gate_passing.jsonl"
 
 
 def run(limit: int | None = None, car: str = CAR) -> None:
@@ -147,9 +150,60 @@ def run_vehicles(car: str = CAR) -> None:
         print(f"  {set_name}: {len(questions)} questions")
 
 
+def _named_ignoring_this_car(question: str, car: str) -> str | None:
+    """What the other-vehicle check said before the passing-mention rule: any other
+    vehicle named, whether or not the question also names this car. Kept here so the
+    same fresh questions show the check before and after the rule."""
+    own_words = set(vehicles._normalise(car).split())
+    text = vehicles._normalise(question)
+    for name, forms in vehicles._keys():
+        if set(vehicles._normalise(name).split()) <= own_words:
+            continue
+        if any(form in text for form in forms):
+            return name
+    return None
+
+
+def run_passing(car: str = CAR) -> None:
+    """The whole gate, stage by stage, on questions that mention two vehicles. The model
+    is only called for a question that names no other vehicle and that the score declines."""
+    if settings.retrieval != "rerank":
+        raise SystemExit("The gate reads reranker scores; unset GEARHEAD_RETRIEVAL to score it.")
+    questions = load_passing_set(car)
+    if not questions:
+        raise SystemExit("No questions found for the passing-mention set.")
+    todo = pending(questions, OUT_PASSING)
+    print(f"Passing-mention eval: {len(todo)} questions -> {OUT_PASSING}")
+    brain = get_provider()
+
+    for i, row in enumerate(todo, 1):
+        named = other_vehicle_named(row["question"], car)
+        hits, _ = _retrieve(row["question"], car, brain=None, final=ONE_SHOT_CHUNKS)
+        blocked_by_score = not manual_covers(hits)
+        subject, score = None, None
+        if not named and blocked_by_score:
+            subject = name_subject(row["question"], brain)
+            score = round(subject_score(subject, car), 4)
+        append_jsonl(OUT_PASSING, {
+            "id": row["id"],
+            "kind": row["kind"],
+            "group": row["group"],
+            "named_before": _named_ignoring_this_car(row["question"], car),
+            "named": named,
+            "top_score": max((h.get("rerank_score", 1.0) for h in hits), default=0.0),
+            "blocked_by_score": blocked_by_score,
+            "subject": subject,
+            "subject_score": score,
+            "declined": bool(named) or (blocked_by_score and score < settings.gate_subject_min_score),
+        })
+        print(f"  {i}/{len(todo)} {row['id']} named={named} {subject or ''}")
+
+
 if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")
-    if "vehicles" in sys.argv[1:]:
+    if "passing" in sys.argv[1:]:
+        run_passing()
+    elif "vehicles" in sys.argv[1:]:
         run_vehicles()
     elif "subject" in sys.argv[1:]:
         run_subject(holdout="holdout" in sys.argv[1:])

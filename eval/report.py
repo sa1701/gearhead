@@ -217,6 +217,27 @@ VEHICLE_SETS = (
 )
 
 
+PASSING_GROUPS = (
+    ("patrol_named_other_mentioned", "About this car, names it, mentions another", "should go ahead"),
+    ("patrol_unnamed_other_mentioned", "About this car, does not name it, mentions another", "should go ahead"),
+    ("other_vehicle_patrol_mentioned", "About another vehicle, mentions this car", "should be declined"),
+    ("other_vehicle_only", "About another vehicle only", "should be declined"),
+)
+
+
+def passing_summary(rows: list[dict]) -> dict:
+    """Per group of two-vehicle questions: declined by the other-vehicle check before the
+    passing-mention rule, by the check now, and by the whole gate."""
+    summary = {}
+    for group, _, _ in PASSING_GROUPS:
+        of_group = [r for r in rows if r.get("group") == group]
+        if of_group:
+            summary[group] = {"vehicle_check_before": _declined(of_group, "named_before"),
+                              "vehicle_check_now": _declined(of_group, "named"),
+                              "whole_gate": _declined(of_group, "declined")}
+    return summary
+
+
 def _count_cell(result: dict) -> str:
     return f"{_pct(result['rate'])} ({result['successes']} of {result['n']})"
 
@@ -352,6 +373,19 @@ def to_markdown(summary: dict) -> str:
                   f"{_count_cell(vehicles[kind]['with_vehicle_check'])} |"
                   for kind, label in SUBJECT_KINDS if kind in vehicles]
         lines.append("")
+    passing = summary.get("passing")
+    if passing:
+        lines += [
+            "## Questions that mention two vehicles", "",
+            "Declined by each stage. Written after the passing-mention rule was committed.", "",
+            "| Question group | Right outcome | Vehicle check before the rule | Vehicle check now | Whole gate |",
+            "|---|---|---|---|---|",
+        ]
+        lines += [f"| {label} | {wanted} | {_count_cell(passing[group]['vehicle_check_before'])} | "
+                  f"{_count_cell(passing[group]['vehicle_check_now'])} | "
+                  f"{_count_cell(passing[group]['whole_gate'])} |"
+                  for group, label, wanted in PASSING_GROUPS if group in passing]
+        lines.append("")
     gate = summary.get("gate")
     if gate:
         lines += [
@@ -397,6 +431,9 @@ def build_summary() -> dict:
         vehicles = vehicle_summary([r for r in vehicle_rows if r.get("set") == set_name], earlier[set_name])
         if vehicles:
             summary[f"vehicles_{set_name}"] = vehicles
+    passing = passing_summary(read_results(RESULTS_DIR / "gate_passing.jsonl"))
+    if passing:
+        summary["passing"] = passing
     gate = gate_summary(read_results(RESULTS_DIR / "gate.jsonl"), read_results(RESULTS_DIR / "grounding.jsonl"))
     if gate:
         summary["gate"] = gate

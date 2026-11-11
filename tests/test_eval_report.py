@@ -7,6 +7,7 @@ from eval.report import (
     grounding_summary,
     merge_by_id,
     retrieval_summary,
+    passing_summary,
     subject_summary,
     vehicle_summary,
     to_markdown,
@@ -320,3 +321,37 @@ def test_report_marks_a_set_with_no_earlier_run():
 
     assert "## Other-vehicle check: questions written after the name list was frozen" in report
     assert "| No answer in manual | not run | 67% (2 of 3) | 67% (2 of 3) |" in report
+
+
+PASSING_ROWS = [
+    {"id": "p-1", "group": "patrol_named_other_mentioned", "named_before": "hilux", "named": None, "declined": False},
+    {"id": "p-2", "group": "patrol_named_other_mentioned", "named_before": "prado", "named": None, "declined": True},
+    {"id": "p-3", "group": "other_vehicle_only", "named_before": "civic", "named": "civic", "declined": True},
+    {"id": "p-4", "group": "other_vehicle_only", "named_before": None, "named": None, "declined": False},
+]
+
+
+def test_passing_summary_counts_each_stage_per_group():
+    summary = passing_summary(PASSING_ROWS)
+
+    named = summary["patrol_named_other_mentioned"]
+    assert named["vehicle_check_before"]["successes"] == 2
+    assert named["vehicle_check_now"]["successes"] == 0
+    assert named["whole_gate"]["successes"] == 1
+    assert named["whole_gate"]["n"] == 2
+    assert summary["other_vehicle_only"]["vehicle_check_now"]["successes"] == 1
+
+
+def test_passing_summary_leaves_out_groups_with_no_questions():
+    assert "patrol_unnamed_other_mentioned" not in passing_summary(PASSING_ROWS)
+
+
+def test_passing_summary_of_no_rows_is_empty():
+    assert passing_summary([]) == {}
+
+
+def test_report_shows_the_passing_mention_table():
+    report = to_markdown({"passing": passing_summary(PASSING_ROWS)})
+
+    assert "## Questions that mention two vehicles" in report
+    assert "| About this car, names it, mentions another | should go ahead | 100% (2 of 2) | 0% (0 of 2) | 50% (1 of 2) |" in report

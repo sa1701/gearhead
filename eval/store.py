@@ -62,6 +62,11 @@ def load_vehicle_set(car: str = CAR) -> list[dict]:
     return read_jsonl(GOLD_DIR / f"vehicles-{car}.jsonl")
 
 
+def load_passing_set(car: str = CAR) -> list[dict]:
+    """Questions that mention two vehicles, written after the passing-mention rule."""
+    return read_jsonl(GOLD_DIR / f"passing-{car}.jsonl")
+
+
 def load_followups(car: str = CAR) -> dict[str, str]:
     """Question id -> what the owner says when asked for more detail."""
     path = GOLD_DIR / f"followups-{car}.json"
