@@ -18,6 +18,10 @@ How the names were chosen:
   it is one of the most common makes in Australia.
 - Names that already appear in the Patrol manual text are left out, because an owner
   may use them for a part (the manual names Mitsubishi as a parts maker).
+
+A question that also names this car's model is not declined. "I towed my mate's Hilux
+with my Patrol and now the clutch slips" is about the Patrol. The make alone does not
+count, because "my Nissan Navara" is still another vehicle.
 """
 from __future__ import annotations
 
@@ -82,14 +86,55 @@ def _keys() -> tuple[tuple[str, tuple[str, ...]], ...]:
     return tuple(keys)
 
 
+MIN_MODEL_WORD_CHARS = 3
+
+
+@lru_cache(maxsize=None)
+def _model_forms(car: str) -> tuple[str, ...]:
+    """The ways a question can name the loaded car's model, as padded strings.
+
+    The car id is make first ("nissan-patrol-y61", "land-rover-defender"). After the
+    make, these count as naming the model:
+    - the whole model, spaced or run together ("cx 5", "cx5");
+    - a model from the name list made only of the car's words ("land cruiser");
+    - one word of the model on its own ("patrol", "y61"), unless it is a number, is
+      under three characters, or is also a word in another vehicle's name. So "5" in
+      "5 speed" does not name a CX-5, and "land" does not name a Land Cruiser.
+    """
+    words = _normalise(car).split()
+    make_length = max((n for n in range(1, len(words)) if " ".join(words[:n]) in MAKES), default=1)
+    model = words[make_length:]
+    if not model:
+        return ()
+    own = set(words)
+    own_names = {name for name in MODELS if set(name.split()) <= own}
+    shared = {word for name in VEHICLE_NAMES - own_names for word in name.split()}
+    names = {" ".join(model)} | own_names
+    names |= {word for word in model
+              if len(word) >= MIN_MODEL_WORD_CHARS and not word.isdigit() and word not in shared}
+    forms = {f" {name} " for name in names} | {" " + name.replace(" ", "") + " " for name in names}
+    return tuple(sorted(forms))
+
+
+def _names_this_model(text: str, car: str) -> bool:
+    """True if the normalised question names the loaded car's model."""
+    return any(form in text for form in _model_forms(car))
+
+
 def other_vehicle_named(problem: str, car: str) -> str | None:
     """The first make or model named in the question that is not the loaded car, or None.
 
     The car's own words (for "nissan-patrol-y61": nissan, patrol, y61) never count,
-    so "my Nissan Patrol" passes and "my Nissan Navara" does not.
+    so "my Nissan Patrol" passes and "my Nissan Navara" does not. If the question
+    names this car's model, another vehicle is treated as a passing mention, so None.
+    That also lets through a question that is really about the other vehicle but
+    mentions this one ("Hilux clutch slips, I also own a Patrol"). The score gate and
+    the subject check still apply to it.
     """
     own_words = set(_normalise(car).split())
     text = _normalise(problem)
+    if _names_this_model(text, car):
+        return None
     for name, forms in _keys():
         if set(_normalise(name).split()) <= own_words:
             continue
