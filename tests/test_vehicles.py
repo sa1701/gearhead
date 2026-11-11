@@ -15,6 +15,10 @@ CAR = "nissan-patrol-y61"
     ("head bolt torque for a VE commodore", "commodore"),
     ("x-trail cvt shudder", "x trail"),
     ("my Nissan Navara has a clunk from the rear", "navara"),
+    ("CX5 rattles over bumps", "cx 5"),
+    ("F150 wont idle", "f 150"),
+    ("Citroën C4 gearbox fault", "citroen"),
+    ("Škoda Octavia DSG judder", "skoda"),
 ])
 def test_names_another_vehicle(question, name):
     assert other_vehicle_named(question, CAR) == name
@@ -28,6 +32,9 @@ def test_names_another_vehicle(question, name):
     "fuel gauge reads empty in the outback",
     "the polonium seal",            # a model name inside a longer word does not count
     "my patrol ran over a golfball",
+    "rust bubbles the size of a golf ball on my patrol",
+    "I dodge the potholes but the front still clunks",
+    "my jeep overheats on the dunes",   # in the Gulf 'jeep' means any 4WD
 ])
 def test_does_not_flag_questions_about_this_car(question):
     assert other_vehicle_named(question, CAR) is None

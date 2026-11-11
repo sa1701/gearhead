@@ -12,18 +12,23 @@ How the names were chosen:
 - Makes and models sold in Australia and the Gulf, written as owners type them.
 - Names that are also everyday English words are left out, because owners use those
   words in ordinary questions: outback, territory, discovery, accord, liberty,
-  charger, pilot, leaf, swift, focus, seat, smart, mini, ram, city, jazz.
+  charger, pilot, leaf, swift, focus, seat, smart, mini, ram, city, jazz, dodge
+  ("dodge the potholes"), golf ("golf ball size"), and jeep, which in the Gulf and
+  elsewhere means any 4WD. Ford stays in although "ford a creek" is a risk, because
+  it is one of the most common makes in Australia.
 - Names that already appear in the Patrol manual text are left out, because an owner
   may use them for a part (the manual names Mitsubishi as a parts maker).
 """
 from __future__ import annotations
 
 import re
+import unicodedata
+from functools import lru_cache
 
 MAKES = frozenset({
     "toyota", "ford", "holden", "mazda", "hyundai", "kia", "isuzu", "subaru",
-    "volkswagen", "vw", "honda", "lexus", "land rover", "range rover", "jeep",
-    "chevrolet", "chevy", "gmc", "dodge", "tesla", "bmw", "mercedes", "mercedes benz",
+    "volkswagen", "vw", "honda", "lexus", "land rover", "range rover",
+    "chevrolet", "chevy", "gmc", "tesla", "bmw", "mercedes", "mercedes benz",
     "benz", "audi", "suzuki", "haval", "gwm", "great wall", "byd", "chery", "geely",
     "renault", "peugeot", "citroen", "volvo", "porsche", "infiniti", "cadillac",
     "lincoln", "jaguar", "skoda", "fiat", "alfa romeo", "lada", "ssangyong", "mahindra",
@@ -50,7 +55,7 @@ MODELS = frozenset({
     "navara", "x trail", "xtrail", "pathfinder", "qashqai", "altima", "sentra", "micra",
     "juke", "armada", "tiida", "gt r",
     # Isuzu, Subaru, Volkswagen, Honda, Suzuki, Land Rover
-    "mu x", "forester", "impreza", "wrx", "amarok", "golf", "polo", "tiguan", "touareg",
+    "mu x", "forester", "impreza", "wrx", "amarok", "polo", "tiguan", "touareg",
     "passat", "jetta", "civic", "cr v", "hr v", "jimny", "vitara", "defender",
 })
 
@@ -58,9 +63,23 @@ VEHICLE_NAMES = MAKES | MODELS
 
 
 def _normalise(text: str) -> str:
-    """Lower case, every run of other characters turned into one space, padded with
-    spaces so a name only matches as whole words ("x-trail" and "X Trail" both match)."""
-    return " " + re.sub(r"[^a-z0-9]+", " ", text.lower()).strip() + " "
+    """Lower case with accents dropped ("Citroën" is "citroen"), every run of other
+    characters turned into one space, padded with spaces so a name only matches as
+    whole words ("x-trail" and "X Trail" both match)."""
+    plain = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
+    return " " + re.sub(r"[^a-z0-9]+", " ", plain.lower()).strip() + " "
+
+
+@lru_cache(maxsize=1)
+def _keys() -> tuple[tuple[str, tuple[str, ...]], ...]:
+    """Each name with the forms it matches: as written, and run together when it has a
+    space ("cx 5" also matches "CX5", "f 150" also matches "F150")."""
+    keys = []
+    for name in sorted(VEHICLE_NAMES):
+        spaced = _normalise(name)
+        joined = " " + spaced.replace(" ", "") + " "
+        keys.append((name, (spaced, joined) if joined != spaced else (spaced,)))
+    return tuple(keys)
 
 
 def other_vehicle_named(problem: str, car: str) -> str | None:
@@ -71,10 +90,9 @@ def other_vehicle_named(problem: str, car: str) -> str | None:
     """
     own_words = set(_normalise(car).split())
     text = _normalise(problem)
-    for name in sorted(VEHICLE_NAMES):
-        key = _normalise(name)
-        if set(key.split()) <= own_words:
+    for name, forms in _keys():
+        if set(_normalise(name).split()) <= own_words:
             continue
-        if key in text:
+        if any(form in text for form in forms):
             return name
     return None
