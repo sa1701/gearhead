@@ -52,6 +52,11 @@ def load_vague(car: str = CAR) -> list[dict]:
     return read_jsonl(GOLD_DIR / f"vague-{car}.jsonl")
 
 
+def load_holdout(car: str = CAR) -> list[dict]:
+    """Questions written after the gate thresholds were chosen, and never used to tune them."""
+    return read_jsonl(GOLD_DIR / f"holdout-{car}.jsonl")
+
+
 def load_followups(car: str = CAR) -> dict[str, str]:
     """Question id -> what the owner says when asked for more detail."""
     path = GOLD_DIR / f"followups-{car}.json"
