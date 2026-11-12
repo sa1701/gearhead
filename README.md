@@ -7,7 +7,7 @@
 
 Python · FastAPI · Retrieval-Augmented Generation · Multimodal LLM · Ollama · ChromaDB · PyMuPDF
 
-<img src="docs/demo.gif" alt="GEARHEAD demo — a diagnosis interview ending in a cited fix with the manual diagram" width="720" />
+<img src="docs/showroom.jpg" alt="GEARHEAD start screen: a Nissan Patrol Y61 in 3D on a mirror floor at dusk, with a bar to describe the problem" width="820" />
 
 </div>
 
@@ -67,13 +67,13 @@ It runs locally. In Claude mode the only thing that leaves your machine is the c
 | Retrieval | ChromaDB (local vector store) |
 | PDF + image extraction | PyMuPDF |
 | Reasoning + vision | Claude API (vision) **or** local Ollama (offline, free) behind a pluggable `AIProvider` |
-| Frontend | HTML / CSS / vanilla JS (car-dashboard theme, SVG confidence gauge) |
+| Frontend | HTML / CSS / vanilla JS with three.js: the selected car in 3D, a backdrop per car, and a camera that moves to the part being discussed |
 
 ---
 
 ## Project status
 
-**Working end-to-end:** manual ingestion + search, grounded cited diagnosis, the interview loop, diagram rendering, a themed FastAPI web app — and a **fully offline Ollama mode** (no API key, no cost).
+**Working end-to-end:** manual ingestion + search, grounded cited diagnosis, the interview loop, diagram rendering, a FastAPI web app with a 3D showroom front end — and a **fully offline Ollama mode** (no API key, no cost).
 
 **Next:** prove "add a car = drop a PDF" with a second vehicle.
 
@@ -134,10 +134,17 @@ gearhead/
     ├── ai/               # swappable AIProvider interface + implementations
     ├── library/          # manual ingestion, search, image rendering
     ├── brain/            # diagnosis + interview engine
-    └── web/              # FastAPI server + car-dashboard UI
+    └── web/              # FastAPI server + 3D showroom UI (static/showroom.js, static/cars/cars.json)
 ```
 
 ---
+
+## Credits
+
+- **3D engine:** [three.js](https://threejs.org) r170, MIT licence. A copy is kept in `src/web/static/vendor/three` so the app runs offline.
+- **3D car model:** "Nissan Patrol (Y61) 5door 2004" by Nieve5677 on [Sketchfab](https://skfb.ly/pvJSp), listed as Creative Commons Attribution 4.0. The model file is not in this repository. To see the car, download it yourself and save it as `src/web/static/cars/nissan-patrol-y61.glb`. Without it the app draws a plain stand-in.
+- **Fonts:** Outfit and Inter, SIL Open Font License, loaded from Google Fonts.
+- **Reranker:** ms-marco-MiniLM-L-12-v2, run through flashrank.
 
 ## ⚠️ Disclaimer & legal note
 
