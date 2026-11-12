@@ -8,6 +8,10 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(PROJECT_ROOT / ".env")
 
 
+LOCAL_INTERVIEW_CHUNKS = 8
+CLOUD_INTERVIEW_CHUNKS = 20
+
+
 class Settings:
     anthropic_api_key: str = os.getenv("ANTHROPIC_API_KEY", "")
     model: str = os.getenv("GEARHEAD_MODEL", "claude-opus-4-8")
@@ -18,10 +22,36 @@ class Settings:
     provider: str = os.getenv("GEARHEAD_PROVIDER", "auto")
     ollama_model: str = os.getenv("GEARHEAD_OLLAMA_MODEL", "qwen2.5:7b-instruct")
     ollama_host: str = os.getenv("GEARHEAD_OLLAMA_HOST", "http://127.0.0.1:11434")
+    # GPU layers for Ollama. Unset = let Ollama decide; 0 = force CPU (useful when the GPU is throttled).
+    ollama_num_gpu: str | None = os.getenv("GEARHEAD_OLLAMA_NUM_GPU")
+
+    # How manual chunks are picked: "rerank" (search wide, then a local cross-encoder
+    # re-orders) or "expand" (the older LLM query-expansion path).
+    retrieval: str = os.getenv("GEARHEAD_RETRIEVAL", "rerank")
+    rerank_model: str = os.getenv("GEARHEAD_RERANK_MODEL", "ms-marco-MiniLM-L-12-v2")
+    rerank_pool: int = int(os.getenv("GEARHEAD_RERANK_POOL", "40"))  # candidates read by the reranker
+    # Below this best rerank score the brain declines instead of guessing. 0 switches the gate off.
+    gate_min_score: float = float(os.getenv("GEARHEAD_GATE_MIN_SCORE", "0.1"))
+    # A question under that score still goes ahead if the part it is about scores at
+    # least this against the manual. 0 switches this second look off.
+    gate_subject_min_score: float = float(os.getenv("GEARHEAD_GATE_SUBJECT_MIN_SCORE", "0.5"))
+    # Manual chunks the interview reasons over. Unset = pick by brain (see interview_chunk_count).
+    interview_chunks: str | None = os.getenv("GEARHEAD_INTERVIEW_CHUNKS")
 
     manuals_dir: Path = PROJECT_ROOT / "manuals"
     chroma_dir: Path = PROJECT_ROOT / "chroma_db"
     images_dir: Path = PROJECT_ROOT / "page_images"
+    models_dir: Path = PROJECT_ROOT / "models"
+
+    def interview_chunk_count(self) -> int:
+        """How many manual chunks the interview loads.
+
+        A local model reads its context slowly (about 8 minutes for 20 chunks on a
+        laptop CPU), so it gets the 8 best. A cloud model reads 20 in seconds.
+        """
+        if self.interview_chunks:
+            return int(self.interview_chunks)
+        return LOCAL_INTERVIEW_CHUNKS if self.resolved_provider() == "ollama" else CLOUD_INTERVIEW_CHUNKS
 
     def resolved_provider(self) -> str:
         if self.provider in ("claude", "ollama"):

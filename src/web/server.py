@@ -86,6 +86,8 @@ def illustrate_endpoint(req: SessionReq):
     session = SESSIONS.get(req.session_id)
     if session is None:
         raise HTTPException(404, "Session not found.")
+    if not session.hits:  # the brain declined, so there is no manual page to show
+        return {"images": [], "captions": ""}
     res = illustrate(session.problem, session.hits, subdir=session.car, max_images=2)
     return {
         "images": [f"/page_images/{Path(p).name}" for p in res["images"]],

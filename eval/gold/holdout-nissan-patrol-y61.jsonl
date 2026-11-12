@@ -1,0 +1,37 @@
+{"id": "h-01", "kind": "vague", "question": "smells like diesel inside after i fill up", "note": "Fuel system"}
+{"id": "h-02", "kind": "vague", "question": "exhaust is blowing and sounds like a tractor now", "note": "Exhaust"}
+{"id": "h-03", "kind": "vague", "question": "wipers just stop halfway across the screen", "note": "Wipers and washers"}
+{"id": "h-04", "kind": "vague", "question": "one headlight is way dimmer than the other one", "note": "Lighting"}
+{"id": "h-05", "kind": "vague", "question": "howling noise from underneath when i get on the throttle", "note": "Driveshafts and diffs"}
+{"id": "h-06", "kind": "vague", "question": "engine is tapping loud when its cold in the morning", "note": "Engine mechanical"}
+{"id": "h-07", "kind": "vague", "question": "driver door wont lock with the key anymore", "note": "Door locks"}
+{"id": "h-08", "kind": "vague", "question": "takes forever to fire up on cold mornings and smokes white", "note": "Glow plugs / cold start"}
+{"id": "h-09", "kind": "vague", "question": "temp needle sits real low and heater never gets hot", "note": "Cooling"}
+{"id": "h-10", "kind": "vague", "question": "rear window wont go down and the switch clicks nothing", "note": "Rear door and tailgate"}
+{"id": "h-11", "kind": "vague", "question": "handbrake lever pulls up too far and car still rolls", "note": "Brakes"}
+{"id": "h-12", "kind": "answerable", "question": "The rear differential is leaking oil from the pinion seal at the front of the housing, how do I replace it?", "note": "Driveshafts and diffs"}
+{"id": "h-13", "kind": "answerable", "question": "My front wheel bearings have play and a rumble when turning, how do I adjust the wheel bearing preload?", "note": "Front axle and suspension"}
+{"id": "h-14", "kind": "answerable", "question": "The thermostat seems stuck open and the engine takes ages to warm up, how do I check and replace it?", "note": "Cooling"}
+{"id": "h-15", "kind": "answerable", "question": "The glow plug warning lamp stays on for a long time before I can start, how do I test the glow plugs?", "note": "Glow plugs / cold start"}
+{"id": "h-16", "kind": "answerable", "question": "The rear coil spring on one side has sagged, what is the procedure to remove and replace it?", "note": "Rear suspension"}
+{"id": "h-17", "kind": "answerable", "question": "The front drive hubs do not lock when I turn them to lock, how do I remove and inspect the free-wheeling hub?", "note": "Front axle"}
+{"id": "h-18", "kind": "answerable", "question": "The brake lights stay on all the time, how do I check and adjust the stop lamp switch?", "note": "Lighting and electrical"}
+{"id": "h-19", "kind": "answerable", "question": "The power window motor on the front passenger door is dead, how do I remove the door trim to get at the regulator?", "note": "Body and doors"}
+{"id": "h-20", "kind": "answerable", "question": "The transfer case is leaking oil at the output shaft, what is the procedure to replace the oil seal?", "note": "Transfer case"}
+{"id": "h-21", "kind": "unanswerable", "question": "How do I recalibrate the blind spot monitor on my Patrol after a bumper repair?", "note": "feature not on this car"}
+{"id": "h-22", "kind": "unanswerable", "question": "My Patrol Y61 has the automatic emergency braking light on, how do I reset the forward collision sensor?", "note": "feature not on this car"}
+{"id": "h-23", "kind": "unanswerable", "question": "How do I update the infotainment touchscreen software on my Patrol over wifi?", "note": "feature not on this car"}
+{"id": "h-24", "kind": "unanswerable", "question": "What is the procedure to replace the 12V DC-DC converter for the high voltage system on my Patrol?", "note": "feature not on this car"}
+{"id": "h-25", "kind": "unanswerable", "question": "How do I reset the electric parking brake motor on the Y61 after changing rear pads?", "note": "feature not on this car"}
+{"id": "h-26", "kind": "unanswerable", "question": "My Patrol's 360 degree surround view cameras are blurry, how do I clean and recalibrate them?", "note": "feature not on this car"}
+{"id": "h-27", "kind": "unanswerable", "question": "My Patrol's active LED matrix headlights are not swivelling in corners, how do I fix the adaptive system?", "note": "feature not on this car"}
+{"id": "h-28", "kind": "unanswerable", "question": "Where is the gasoline particulate filter on the Y61 and how do I replace it?", "note": "feature not on this car"}
+{"id": "h-29", "kind": "unanswerable", "question": "How do I charge the plug-in battery and check the charging port on my Patrol?", "note": "feature not on this car"}
+{"id": "h-30", "kind": "unanswerable", "question": "How do I replace the timing belt on a Honda Civic 2008 1.8 petrol?", "note": "different vehicle"}
+{"id": "h-31", "kind": "unanswerable", "question": "My Ford Ranger PX has a whining turbo, how do I change the turbo actuator?", "note": "different vehicle"}
+{"id": "h-32", "kind": "unanswerable", "question": "How do I bleed the clutch hydraulics on a Land Rover Defender Td5?", "note": "different vehicle"}
+{"id": "h-33", "kind": "unanswerable", "question": "What torque do I use on the cylinder head bolts of a Holden Commodore VE V6?", "note": "different vehicle"}
+{"id": "h-34", "kind": "unanswerable", "question": "How do I replace the rear wheel cylinders on a Toyota Hilux 2005 4x4?", "note": "different vehicle"}
+{"id": "h-35", "kind": "unanswerable", "question": "Should I buy a Patrol Y61 or a Land Cruiser 80 series for outback touring?", "note": "not a repair question"}
+{"id": "h-36", "kind": "unanswerable", "question": "Is it legal to fit a 3 inch lift and bigger tyres on my Patrol in NSW without an engineer's certificate?", "note": "not a repair question"}
+{"id": "h-37", "kind": "unanswerable", "question": "Which is better, the ZD30 or the TB45, in your opinion?", "note": "not a repair question"}

@@ -20,3 +20,13 @@ Thumbs.db
 manuals/
 page_images/
 fixes/
+
+# Eval run artefacts: raw answers quote the manuals, logs are local noise
+eval/results/*.jsonl
+eval/results/*.log
+eval/results/*.pid
+eval/gold_review.md
+
+# Local reranker model (downloaded on first use)
+models/
+eval/vague_review.md
