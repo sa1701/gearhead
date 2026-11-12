@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/styles.css?v=8b" />
+  <link rel="stylesheet" href="/static/styles.css?v=9a" />
   <script type="importmap">
     { "imports": {
         "three": "/static/vendor/three/three.module.min.js",
@@ -66,7 +66,7 @@
       </div>
 
       <div class="hero-foot">
-        <a class="credit" id="modelCredit" target="_blank" rel="noopener noreferrer"></a>
+        <span class="foot-spacer"></span>
         <div class="paint-row" id="paintRow" role="group" aria-label="Paint colour"></div>
         <span class="drag-hint">Drag to rotate</span>
       </div>
@@ -124,6 +124,19 @@
     </section>
   </main>
 
+  <footer class="credits">
+    <details>
+      <summary>Credits</summary>
+      <ul>
+        <li>Built by <a href="https://github.com/sa1701/gearhead" target="_blank" rel="noopener noreferrer">Seif Ali</a></li>
+        <li><a id="modelCredit" target="_blank" rel="noopener noreferrer"></a></li>
+        <li>3D engine: <a href="https://threejs.org" target="_blank" rel="noopener noreferrer">three.js</a>, MIT licence</li>
+        <li>Fonts: Outfit and Inter, SIL Open Font License</li>
+        <li>Answers are drawn from the car's workshop manual, which is not part of this project</li>
+      </ul>
+    </details>
+  </footer>
+
   <p class="slow-note" id="slowNote" role="status"></p>
 
   <div class="showroom-status" id="showroomStatus" aria-live="polite">
@@ -136,7 +149,7 @@
     <img id="lbImg" src="" alt="manual page (full size)" />
   </div>
 
-  <script type="module" src="/static/showroom.js?v=8b"></script>
-  <script src="/static/app.js?v=8b"></script>
+  <script type="module" src="/static/showroom.js?v=9a"></script>
+  <script src="/static/app.js?v=9a"></script>
 </body>
 </html>

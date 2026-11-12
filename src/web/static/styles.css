@@ -136,8 +136,19 @@ body:not([data-screen="start"]) .quality, body:not([data-screen="start"]) .slow-
 .start-error { min-height: 20px; margin-top: 10px; text-align: center; color: #ff8a80; font-size: 13px; }
 
 .hero-foot { display: flex; justify-content: space-between; align-items: center; gap: 16px; height: 44px; font-size: 11px; letter-spacing: .08em; color: var(--ink-3); }
-.credit { color: var(--ink-3); text-decoration: none; flex: 1; }
-.credit:hover { color: var(--ink-2); }
+.foot-spacer { flex: 1; }
+
+/* credits: a quiet word in the bottom left corner of every screen, opening a short list */
+.credits { position: fixed; left: var(--edge); bottom: 12px; z-index: 4; font-size: 12px; color: var(--ink-3); }
+.credits summary { cursor: pointer; list-style: none; padding: 4px 0; font-family: var(--display); font-size: 10px; letter-spacing: .26em; text-transform: uppercase; transition: color .3s; }
+.credits summary::-webkit-details-marker { display: none; }
+.credits summary:hover, .credits details[open] summary { color: var(--ink); }
+.credits summary:focus-visible { outline: 1px solid var(--ink-2); outline-offset: 4px; }
+.credits ul { position: absolute; left: 0; bottom: 30px; width: min(380px, calc(100vw - 40px)); list-style: none; padding: 16px 20px; background: rgba(10, 10, 11, .94); border: 1px solid var(--line); border-radius: 14px; line-height: 1.55; color: var(--ink-2); }
+.credits li + li { margin-top: 8px; }
+.credits li:has(> a:only-child:empty) { display: none; }
+.credits a { color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--line); }
+.credits a:hover { border-color: var(--accent); }
 .paint-row { display: flex; align-items: center; gap: 12px; }
 .paint { width: 18px; height: 18px; border-radius: 50%; border: 1px solid rgba(255,255,255,.35); cursor: pointer; padding: 0; position: relative; transition: transform .3s cubic-bezier(.16, 1, .3, 1); }
 .paint::after { content: ""; position: absolute; inset: -5px; border-radius: 50%; border: 1px solid transparent; transition: border-color .3s; }
