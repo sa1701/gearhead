@@ -62,9 +62,10 @@ def load_vehicle_set(car: str = CAR) -> list[dict]:
     return read_jsonl(GOLD_DIR / f"vehicles-{car}.jsonl")
 
 
-def load_passing_set(car: str = CAR) -> list[dict]:
-    """Questions that mention two vehicles, written after the passing-mention rule."""
-    return read_jsonl(GOLD_DIR / f"passing-{car}.jsonl")
+def load_passing_set(car: str = CAR, holdout: bool = False) -> list[dict]:
+    """Questions that mention two vehicles. The first set was used to build the
+    which-vehicle check; the held-out set was written after that check was frozen."""
+    return read_jsonl(GOLD_DIR / f"passing-{'holdout-' if holdout else ''}{car}.jsonl")
 
 
 def load_followups(car: str = CAR) -> dict[str, str]:

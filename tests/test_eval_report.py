@@ -324,10 +324,10 @@ def test_report_marks_a_set_with_no_earlier_run():
 
 
 PASSING_ROWS = [
-    {"id": "p-1", "group": "patrol_named_other_mentioned", "named_before": "hilux", "named": None, "declined": False},
-    {"id": "p-2", "group": "patrol_named_other_mentioned", "named_before": "prado", "named": None, "declined": True},
-    {"id": "p-3", "group": "other_vehicle_only", "named_before": "civic", "named": "civic", "declined": True},
-    {"id": "p-4", "group": "other_vehicle_only", "named_before": None, "named": None, "declined": False},
+    {"id": "p-1", "group": "patrol_named_other_mentioned", "named": "hilux", "about_other": False, "declined": False},
+    {"id": "p-2", "group": "patrol_named_other_mentioned", "named": "prado", "about_other": True, "declined": True},
+    {"id": "p-3", "group": "other_vehicle_only", "named": "civic", "about_other": True, "declined": True},
+    {"id": "p-4", "group": "other_vehicle_only", "named": None, "about_other": None, "declined": False},
 ]
 
 
@@ -335,11 +335,11 @@ def test_passing_summary_counts_each_stage_per_group():
     summary = passing_summary(PASSING_ROWS)
 
     named = summary["patrol_named_other_mentioned"]
-    assert named["vehicle_check_before"]["successes"] == 2
-    assert named["vehicle_check_now"]["successes"] == 0
+    assert named["named"]["successes"] == 2
+    assert named["about_other"]["successes"] == 1
     assert named["whole_gate"]["successes"] == 1
     assert named["whole_gate"]["n"] == 2
-    assert summary["other_vehicle_only"]["vehicle_check_now"]["successes"] == 1
+    assert summary["other_vehicle_only"]["about_other"]["successes"] == 1
 
 
 def test_passing_summary_leaves_out_groups_with_no_questions():
@@ -350,8 +350,23 @@ def test_passing_summary_of_no_rows_is_empty():
     assert passing_summary([]) == {}
 
 
-def test_report_shows_the_passing_mention_table():
-    report = to_markdown({"passing": passing_summary(PASSING_ROWS)})
+def test_report_shows_the_two_vehicle_tables():
+    report = to_markdown({"passing_holdout": passing_summary(PASSING_ROWS)})
 
-    assert "## Questions that mention two vehicles" in report
-    assert "| About this car, names it, mentions another | should go ahead | 100% (2 of 2) | 0% (0 of 2) | 50% (1 of 2) |" in report
+    assert "## Questions that mention two vehicles: written after the which-vehicle check was frozen" in report
+    assert "| About this car, names it, mentions another | should go ahead | 100% (2 of 2) | 50% (1 of 2) | 50% (1 of 2) |" in report
+
+
+def test_gate_decision_matches_the_gate_for_every_stage():
+    from eval.gate_eval import gate_decision
+
+    # about another vehicle: declined whatever the score says
+    assert gate_decision(about_other=True, blocked_by_score=False, has_hits=True, subject_score=None, threshold=0.5)
+    # a good page match goes ahead
+    assert not gate_decision(about_other=None, blocked_by_score=False, has_hits=True, subject_score=None, threshold=0.5)
+    # a low score is rescued only by a subject found in the manual
+    assert not gate_decision(about_other=False, blocked_by_score=True, has_hits=True, subject_score=0.9, threshold=0.5)
+    assert gate_decision(about_other=False, blocked_by_score=True, has_hits=True, subject_score=0.2, threshold=0.5)
+    # no pages at all, or the subject check switched off: declined without a second look
+    assert gate_decision(about_other=None, blocked_by_score=True, has_hits=False, subject_score=None, threshold=0.5)
+    assert gate_decision(about_other=None, blocked_by_score=True, has_hits=True, subject_score=None, threshold=0)
