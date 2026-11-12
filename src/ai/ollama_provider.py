@@ -55,26 +55,27 @@ class OllamaProvider(AIProvider):
         cache: bool = False,
         thinking: bool = False,
     ) -> str:
-        # cache/thinking are Claude-only knobs — accepted so callers don't have to
-        # care which brain is loaded.
+        # cache is a Claude-only knob, accepted so callers don't have to care which
+        # brain is loaded. thinking=False is passed on: some local models (Qwen 3)
+        # write out their reasoning first, which uses up a short token limit and
+        # leaves the answer empty. Models that never think ignore the switch.
         chat = [{"role": "system", "content": system}]
         chat += [{"role": m["role"], "content": _text_only(m["content"])} for m in messages]
         options = {"num_predict": max_tokens, "num_ctx": 16384, "temperature": 0.3}
         if settings.ollama_num_gpu:
             options["num_gpu"] = int(settings.ollama_num_gpu)
-        resp = httpx.post(
-            f"{self.host}/api/chat",
-            json={
-                "model": self.model,
-                "messages": chat,
-                "stream": False,
-                # num_ctx must fit the full interview context (20 excerpts ≈ 6k
-                # tokens) or Ollama silently truncates from the top — which eats
-                # the system prompt and with it the QUESTION:/DIAGNOSIS: protocol.
-                "options": options,
-            },
-            timeout=600.0,
-        )
+        body = {
+            "model": self.model,
+            "messages": chat,
+            "stream": False,
+            # num_ctx must fit the full interview context (20 excerpts ≈ 6k
+            # tokens) or Ollama silently truncates from the top — which eats
+            # the system prompt and with it the QUESTION:/DIAGNOSIS: protocol.
+            "options": options,
+        }
+        if not thinking:
+            body["think"] = False
+        resp = httpx.post(f"{self.host}/api/chat", json=body, timeout=600.0)
         resp.raise_for_status()
         data = resp.json()
         self.last_usage = _Usage(data.get("prompt_eval_count", 0), data.get("eval_count", 0))
