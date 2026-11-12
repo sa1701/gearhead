@@ -9,6 +9,7 @@ Run:  python -m eval.gate_eval             # one-shot gate on the main question 
       python -m eval.gate_eval subject holdout   # the same, on questions never used for tuning
       python -m eval.gate_eval vehicles    # the other-vehicle check on every question set. No model call
       python -m eval.gate_eval passing     # the whole gate on questions that mention two vehicles
+      python -m eval.gate_eval passing holdout   # the same, on questions written after the check was frozen
 """
 from __future__ import annotations
 
@@ -19,7 +20,7 @@ from src.ai import get_provider
 from src.brain.diagnose import _retrieve
 from src.brain.gate import manual_covers
 from src.brain.subject import name_subject, subject_score
-from src.brain import vehicles
+from src.brain.about import is_about_another_vehicle
 from src.brain.vehicles import other_vehicle_named
 from src.config import settings
 
@@ -34,6 +35,7 @@ OUT_SUBJECT = RESULTS_DIR / "gate_subject.jsonl"
 OUT_SUBJECT_HOLDOUT = RESULTS_DIR / "gate_subject_holdout.jsonl"
 OUT_VEHICLES = RESULTS_DIR / "gate_vehicles.jsonl"
 OUT_PASSING = RESULTS_DIR / "gate_passing.jsonl"
+OUT_PASSING_HOLDOUT = RESULTS_DIR / "gate_passing_holdout.jsonl"
 
 
 def run(limit: int | None = None, car: str = CAR) -> None:
@@ -150,59 +152,66 @@ def run_vehicles(car: str = CAR) -> None:
         print(f"  {set_name}: {len(questions)} questions")
 
 
-def _named_ignoring_this_car(question: str, car: str) -> str | None:
-    """What the other-vehicle check said before the passing-mention rule: any other
-    vehicle named, whether or not the question also names this car. Kept here so the
-    same fresh questions show the check before and after the rule."""
-    own_words = set(vehicles._normalise(car).split())
-    text = vehicles._normalise(question)
-    for name, forms in vehicles._keys():
-        if set(vehicles._normalise(name).split()) <= own_words:
-            continue
-        if any(form in text for form in forms):
-            return name
-    return None
+def gate_decision(about_other: bool | None, blocked_by_score: bool, has_hits: bool,
+                  subject_score: float | None, threshold: float) -> bool:
+    """True if the gate declines, given what each stage found. The same order as
+    gate.covers: another vehicle first, then the page match, then the subject check,
+    which is skipped when there are no pages or it is switched off."""
+    if about_other:
+        return True
+    if not blocked_by_score:
+        return False
+    if not has_hits or threshold <= 0 or subject_score is None:
+        return True
+    return subject_score < threshold
 
 
-def run_passing(car: str = CAR) -> None:
-    """The whole gate, stage by stage, on questions that mention two vehicles. The model
-    is only called for a question that names no other vehicle and that the score declines."""
+def run_passing(car: str = CAR, holdout: bool = False) -> None:
+    """The whole gate, stage by stage, on questions that mention two vehicles.
+
+    This repeats the steps of gate.covers with the app's own functions, so that each
+    stage can be recorded. The model is asked which vehicle the question is about only
+    when another vehicle is named, and asked for the subject only when the score declines.
+    """
     if settings.retrieval != "rerank":
         raise SystemExit("The gate reads reranker scores; unset GEARHEAD_RETRIEVAL to score it.")
-    questions = load_passing_set(car)
+    questions = load_passing_set(car, holdout)
     if not questions:
-        raise SystemExit("No questions found for the passing-mention set.")
-    todo = pending(questions, OUT_PASSING)
-    print(f"Passing-mention eval: {len(todo)} questions -> {OUT_PASSING}")
+        raise SystemExit("No questions found for this two-vehicle set.")
+    out = OUT_PASSING_HOLDOUT if holdout else OUT_PASSING
+    todo = pending(questions, out)
+    print(f"Two-vehicle eval: {len(todo)} questions -> {out}")
     brain = get_provider()
 
     for i, row in enumerate(todo, 1):
         named = other_vehicle_named(row["question"], car)
+        about_other = is_about_another_vehicle(row["question"], car, brain) if named else None
         hits, _ = _retrieve(row["question"], car, brain=None, final=ONE_SHOT_CHUNKS)
         blocked_by_score = not manual_covers(hits)
         subject, score = None, None
-        if not named and blocked_by_score:
+        if not about_other and blocked_by_score and hits and settings.gate_subject_min_score > 0:
             subject = name_subject(row["question"], brain)
             score = round(subject_score(subject, car), 4)
-        append_jsonl(OUT_PASSING, {
+        append_jsonl(out, {
             "id": row["id"],
             "kind": row["kind"],
             "group": row["group"],
-            "named_before": _named_ignoring_this_car(row["question"], car),
             "named": named,
+            "about_other": about_other,
             "top_score": max((h.get("rerank_score", 1.0) for h in hits), default=0.0),
             "blocked_by_score": blocked_by_score,
             "subject": subject,
             "subject_score": score,
-            "declined": bool(named) or (blocked_by_score and score < settings.gate_subject_min_score),
+            "declined": gate_decision(about_other, blocked_by_score, bool(hits), score,
+                                      settings.gate_subject_min_score),
         })
-        print(f"  {i}/{len(todo)} {row['id']} named={named} {subject or ''}")
+        print(f"  {i}/{len(todo)} {row['id']} named={named} about_other={about_other} {subject or ''}")
 
 
 if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")
     if "passing" in sys.argv[1:]:
-        run_passing()
+        run_passing(holdout="holdout" in sys.argv[1:])
     elif "vehicles" in sys.argv[1:]:
         run_vehicles()
     elif "subject" in sys.argv[1:]:

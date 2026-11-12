@@ -310,9 +310,51 @@ is better on one group and worse on another, and with 12 questions per group the
 numbers are rough. The four groups are equal in size by design. How often each kind
 turns up in real use is not known.
 
-The next fix to test is a check on which vehicle the question is about, used only when
-a question names another vehicle. Any fix has to be tested on questions written after
-it, not on this set.
+### The which-vehicle check
+
+The passing-mention rule was replaced. When a question names another vehicle, one short
+model call (`src/brain/about.py`, 16 tokens) now answers one thing: is the fault on the
+owner's car or on the other vehicle? An unclear reply or a failed call counts as the
+other vehicle, and the question is declined.
+
+The 48 questions above were used to build it, so they no longer count as a test. One
+attempt to improve the prompt on them made the model answer "other" for almost every
+question, and was thrown away. The first prompt was kept and committed. Then
+`gold/passing-holdout-nissan-patrol-y61.jsonl` was written by a separate model that had
+not seen the check, its prompt or the first set: 48 new questions in the same four
+groups. `python -m eval.gate_eval passing holdout` runs the whole gate on them.
+
+Share of the held-out questions declined:
+
+| Question group | Right outcome | Names another vehicle | Model says it is about that vehicle | Whole gate |
+|---|---|---|---|---|
+| About this car, names it, mentions another | go ahead | 10 of 12 | 1 of 12 | 3 of 12 |
+| About this car, does not name it, mentions another | go ahead | 9 of 12 | 2 of 12 | 5 of 12 |
+| About another vehicle, mentions this car | decline | 10 of 12 | 10 of 12 | 12 of 12 |
+| About another vehicle only | decline | 9 of 12 | 9 of 12 | 9 of 12 |
+
+For comparison, on the build set the passing-mention rule declined 4 of 12 questions
+about another vehicle that mentioned this car, and 11 of 12 questions about this car
+that did not name it.
+
+What this shows:
+
+- **The model's answer is usually right.** It was asked about 38 questions. It was
+  right on all 19 about another vehicle, and on 16 of the 19 about this car.
+- **Its mistakes are on the safe side.** All three were real questions about this car
+  that it took for the other vehicle, so they were declined. It never let a question
+  about another vehicle through.
+- **The name list is now the weak point.** Three questions about another vehicle got
+  through because the list does not know "Picanto", "LX570" or "Swift", so the model
+  was never asked. "Swift" was left off the list on purpose, as an everyday word.
+- **The score and the subject check still decline some real questions.** Five of the
+  eight wrongly declined questions about this car were declined there, not by this check.
+- **It costs a model call.** Every question that names another vehicle now waits for
+  one short call.
+
+With 12 questions per group the numbers are rough. The next thing to test is the name
+list: more names, or asking the model about every question that the score would
+decline. Any fix has to be tested on questions written after it, not on this set.
 
 ## Grounding and refusal results
 
@@ -360,6 +402,7 @@ python -m eval.gate_eval subject       # the subject check. One short model call
 python -m eval.gate_eval subject holdout   # the same, on 37 questions never used for tuning
 python -m eval.gate_eval vehicles      # the other-vehicle check on every question set. No model call
 python -m eval.gate_eval passing       # the whole gate on 48 questions that mention two vehicles
+python -m eval.gate_eval passing holdout   # the same, on 48 questions written after the which-vehicle check was frozen
 python -m eval.grounding_eval          # hours on a laptop CPU, resumes if stopped
 python -m eval.report              # writes results/summary.json and results/REPORT.md
 pytest                             # unit tests for the scoring code

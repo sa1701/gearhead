@@ -19,9 +19,9 @@ How the names were chosen:
 - Names that already appear in the Patrol manual text are left out, because an owner
   may use them for a part (the manual names Mitsubishi as a parts maker).
 
-A question that also names this car's model is not declined. "I towed my mate's Hilux
-with my Patrol and now the clutch slips" is about the Patrol. The make alone does not
-count, because "my Nissan Navara" is still another vehicle.
+Naming another vehicle does not decline a question by itself. "I towed my mate's Hilux
+with my Patrol and now the clutch slips" is about the Patrol. The name list only finds
+the mention; about.py then asks which vehicle the question is about.
 """
 from __future__ import annotations
 
@@ -86,55 +86,33 @@ def _keys() -> tuple[tuple[str, tuple[str, ...]], ...]:
     return tuple(keys)
 
 
-MIN_MODEL_WORD_CHARS = 3
+MIN_CODE_CHARS = 3   # "y61", "n70", "2020" are codes or years; "5" in "cx-5" is part of the name
 
 
-@lru_cache(maxsize=None)
-def _model_forms(car: str) -> tuple[str, ...]:
-    """The ways a question can name the loaded car's model, as padded strings.
-
-    The car id is make first ("nissan-patrol-y61", "land-rover-defender"). After the
-    make, these count as naming the model:
-    - the whole model, spaced or run together ("cx 5", "cx5");
-    - a model from the name list made only of the car's words ("land cruiser");
-    - one word of the model on its own ("patrol", "y61"), unless it is a number, is
-      under three characters, or is also a word in another vehicle's name. So "5" in
-      "5 speed" does not name a CX-5, and "land" does not name a Land Cruiser.
-    """
+def car_names(car: str) -> tuple[str, str]:
+    """The loaded car as people write it, and its model alone: for "nissan-patrol-y61",
+    ("Nissan Patrol Y61", "Patrol"). The car id is make first, and a make can be two
+    words ("land-rover-defender"). A code or year at the end is not part of the model."""
     words = _normalise(car).split()
+    if not words:
+        return "", ""
     make_length = max((n for n in range(1, len(words)) if " ".join(words[:n]) in MAKES), default=1)
-    model = words[make_length:]
-    if not model:
-        return ()
-    own = set(words)
-    own_names = {name for name in MODELS if set(name.split()) <= own}
-    shared = {word for name in VEHICLE_NAMES - own_names for word in name.split()}
-    names = {" ".join(model)} | own_names
-    names |= {word for word in model
-              if len(word) >= MIN_MODEL_WORD_CHARS and not word.isdigit() and word not in shared}
-    forms = {f" {name} " for name in names} | {" " + name.replace(" ", "") + " " for name in names}
-    return tuple(sorted(forms))
-
-
-def _names_this_model(text: str, car: str) -> bool:
-    """True if the normalised question names the loaded car's model."""
-    return any(form in text for form in _model_forms(car))
+    written = [word.upper() if any(c.isdigit() for c in word) else word.capitalize() for word in words]
+    model = written[make_length:] or written
+    while len(model) > 1 and len(model[-1]) >= MIN_CODE_CHARS and any(c.isdigit() for c in model[-1]):
+        model = model[:-1]
+    return " ".join(written), " ".join(model)
 
 
 def other_vehicle_named(problem: str, car: str) -> str | None:
     """The first make or model named in the question that is not the loaded car, or None.
 
     The car's own words (for "nissan-patrol-y61": nissan, patrol, y61) never count,
-    so "my Nissan Patrol" passes and "my Nissan Navara" does not. If the question
-    names this car's model, another vehicle is treated as a passing mention, so None.
-    That also lets through a question that is really about the other vehicle but
-    mentions this one ("Hilux clutch slips, I also own a Patrol"). The score gate and
-    the subject check still apply to it.
+    so "my Nissan Patrol" names no other vehicle and "my Nissan Navara" does. This only
+    reports the mention. Whether the question is about that vehicle is asked in about.py.
     """
     own_words = set(_normalise(car).split())
     text = _normalise(problem)
-    if _names_this_model(text, car):
-        return None
     for name, forms in _keys():
         if set(_normalise(name).split()) <= own_words:
             continue

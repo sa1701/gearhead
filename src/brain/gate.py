@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from ..ai.provider import AIProvider
 from ..config import settings
+from .about import is_about_another_vehicle
 from .subject import name_subject, subject_is_in_manual
 from .vehicles import other_vehicle_named
 
@@ -50,13 +51,14 @@ def manual_covers(hits: list[dict]) -> bool:
 def covers(problem: str, car: str, hits: list[dict], brain: AIProvider) -> bool:
     """True if the brain should go on to reason about this question.
 
-    A question that names a different vehicle is declined first, however well it
-    matches a page, because every manual has pages on the same common jobs.
+    A question about a different vehicle is declined first, however well it matches
+    a page, because every manual has pages on the same common jobs. When a question
+    names another vehicle, one short model call decides which vehicle it is about.
     Otherwise a good page match is enough. Without one, the question still goes ahead
     if the part it is about appears in the manual. That costs one short model call,
     and only for questions that would otherwise be declined.
     """
-    if other_vehicle_named(problem, car):
+    if other_vehicle_named(problem, car) and is_about_another_vehicle(problem, car, brain):
         return False
     if manual_covers(hits):
         return True
