@@ -27,6 +27,9 @@ GROUNDING_RUNS = (           # results file stem -> report heading
     ("grounding_nofixdb", "Grounding: expansion pipeline (baseline), Fix DB off"),
     ("grounding_rerank", "Grounding: rerank pipeline, Fix DB on"),
     ("grounding_rerank_nofixdb", "Grounding: rerank pipeline, Fix DB off"),
+    ("grounding_rerank_qwen3", "Grounding: rerank pipeline, qwen3 8B for the gate and the answer"),
+    ("grounding_rerank_holdout_qwen25", "Grounding, held-out sample: qwen2.5 7B for the gate and the answer"),
+    ("grounding_rerank_holdout_split", "Grounding, held-out sample: qwen2.5 7B for the gate, qwen3 8B for the answer"),
 )
 HEADLINE_K = 6               # chunks the one-shot diagnosis passes to the model
 

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Callable
 
-from ..ai import get_provider
+from ..ai import get_gate_provider, get_provider
 from ..config import settings
 from .diagnose import _retrieve, build_context
 from .gate import NOT_FOUND_MESSAGE, covers
@@ -71,7 +71,7 @@ def run_interview(
 
     brain = get_provider()
     hits, queries = _retrieve(problem, car, brain, per_query=5, final=settings.interview_chunk_count())
-    if not covers(problem, car, hits, brain):
+    if not covers(problem, car, hits, get_gate_provider(brain)):
         emit("search", "No good match in the manual. Declining instead of guessing.")
         return {"diagnosis": NOT_FOUND_MESSAGE, "questions_asked": 0, "sources": [],
                 "total_cache_read_tokens": 0}
@@ -149,7 +149,7 @@ class DiagnosisSession:
         self.brain = get_provider()
         self.hits, _ = _retrieve(problem, car, self.brain, per_query=5,
                                  final=settings.interview_chunk_count())
-        self.covered = covers(problem, car, self.hits, self.brain)
+        self.covered = covers(problem, car, self.hits, get_gate_provider(self.brain))
         if not self.covered:
             self.hits = []  # nothing worth citing or illustrating
         self.system = INTERVIEW_SYSTEM.format(context=build_context(problem, car, self.hits)) if self.covered else ""

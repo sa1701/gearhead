@@ -5,7 +5,7 @@ answers using ONLY those pages and cites them. No interview loop yet (Step 3).
 """
 from __future__ import annotations
 
-from ..ai import get_provider
+from ..ai import get_gate_provider, get_provider
 from ..ai.provider import AIProvider
 from ..config import settings
 from ..library.fixdb import search_fixes
@@ -136,7 +136,7 @@ def diagnose_once(
     """One-shot grounded diagnosis. Returns {'answer', 'sources', 'queries', 'refused'}."""
     brain = get_provider()
     hits, queries = _retrieve(problem, car, brain)
-    if not covers(problem, car, hits, brain):
+    if not covers(problem, car, hits, get_gate_provider(brain)):
         return {"answer": NOT_FOUND_MESSAGE, "sources": [], "queries": queries, "refused": True}
     user = (
         f"CAR: {car}\n"

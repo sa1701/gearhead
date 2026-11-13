@@ -369,10 +369,91 @@ An answer is scored as one of three outcomes:
 For a repair tool, "hedged" on an unanswerable question is a failure, not a pass.
 A phrase match alone would have counted it as a refusal.
 
+### Three runs
+
+The first run used the starting pipeline (query expansion, no rerank, and the gate
+declined nothing) on the CPU. The other two used the current pipeline (rerank plus the
+coverage gate) on the GPU, once with each local model. Each run is about 30 answerable
+and 30 unanswerable questions.
+
+| Measure | Starting pipeline, qwen2.5 7B | Current pipeline, qwen2.5 7B | Current pipeline, qwen3 8B |
+|---|---|---|---|
+| Unanswerable: refused | 16% (5 of 31) | 93% (28 of 30) | 87% (26 of 30) |
+| Unanswerable: hedged | 26% (8 of 31) | 3% (1 of 30) | 7% (2 of 30) |
+| Unanswerable: answered | 58% (18 of 31) | 3% (1 of 30) | 7% (2 of 30) |
+| Answerable: refused anyway | 0% (0 of 31) | 7% (2 of 30) | 7% (2 of 30) |
+| Correct page among the retrieved chunks | 42% | 63% | 63% |
+| Correct page in context | 81% | 80% | 80% |
+| Answer cites the correct page | 45% | 43% | 70% |
+| Attempts that cite any page | 81% | 71% | 93% |
+| Citations that point to a retrieved page | 97% (of 126) | 98% (of 81) | 100% (of 281) |
+| Median seconds per answer | 215 (CPU) | 20 (GPU) | 35 (GPU) |
+
+What this shows:
+
+- **The gate fixed the refusals.** The starting pipeline gave repair steps for 84% of
+  the questions the manual does not cover. The current one does that for 7% with
+  qwen2.5. The cost is 2 of 30 answerable questions refused.
+- **The gate did not fix the answers.** With qwen2.5 the answer cites the correct page
+  43% of the time, the same as before, even though that page is in context 80% of the
+  time.
+- **qwen3 8B cites much better.** 70% against 43% on the same questions with the same
+  retrieved pages. It also cites more pages per answer (281 citations against 81).
+- **qwen3 8B is not clearly worse at refusing.** 26 of 30 against 28 of 30 is a gap of
+  two questions, and the ranges overlap. The gate declined 28 questions before any
+  answer was written with qwen3 and 29 with qwen2.5, because the gate's own checks
+  also call the model.
+- **qwen3 8B is slower and runs the card hot.** 35 seconds against 20, and the GPU
+  averaged 85 C with a peak of 90 C over the run.
+
+The two models were compared on the same 60 questions and this is one run each, so it
+is a first reading and not a held-out result. The next section is the held-out test.
+
+### One model for the gate, another for the answer
+
+The three runs pointed at a split: qwen2.5 for the gate's short checks and qwen3 for the
+answer. `GEARHEAD_OLLAMA_GATE_MODEL` sets a separate gate model. To test the split,
+30 answerable questions were drawn that the earlier runs never used
+(`python -m eval.grounding_eval holdout`). There are only 30 unanswerable questions, so
+those are the same ones as before. Both setups ran on the same 60 questions, on the GPU,
+on the same day.
+
+| Measure | qwen2.5 for both | qwen2.5 gate, qwen3 answer |
+|---|---|---|
+| Answer cites the correct page | 50% (15 of 30) | 80% (24 of 30) |
+| Correct page in context | 87% (26 of 30) | 83% (25 of 30) |
+| Attempts that cite any page | 62% (18 of 29) | 96% (27 of 28) |
+| Attempts with a citation to a page it was not given | 10% (3 of 29) | 0% (0 of 28) |
+| Unanswerable: refused | 93% (28 of 30) | 90% (27 of 30) |
+| Unanswerable: hedged | 0% (0 of 30) | 3% (1 of 30) |
+| Unanswerable: answered | 7% (2 of 30) | 7% (2 of 30) |
+| Answerable: refused anyway | 3% (1 of 30) | 7% (2 of 30) |
+| Median seconds per answer | 40 | 59 |
+
+What this shows:
+
+- **The citing gain held on new questions.** 80% against 50% on questions neither model
+  had been compared on. The 95% ranges are 63% to 91% and 33% to 67%, so they only
+  just overlap with 30 questions each.
+- **Refusals stayed about the same.** The gate declined 29 questions in both runs. It
+  is the same gate model in both, yet it disagreed with itself on two questions,
+  because the subject check is sampled. That is run-to-run noise, not a model effect.
+- **The split is slower.** 59 seconds against 40. The two models do not fit on an 8 GB
+  card together, so they swap in and out.
+- **The laptop is the limit.** The card averaged 86 C and peaked at 91 C, and the
+  machine ran critically low on memory during the second run.
+
+The default is unchanged: one model, qwen2.5 7B. The split is switched on with
+`GEARHEAD_OLLAMA_MODEL=qwen3:8b` and `GEARHEAD_OLLAMA_GATE_MODEL=qwen2.5:7b-instruct`.
+
+These two runs used Ollama 0.40.16 and the three runs above used 0.20.4. qwen2.5 took
+40 seconds per answer here against 20 there, so do not compare speed across the two
+tables.
+
 ## Limits
 
-- One car, one manual set, one local model (qwen2.5 7B). The numbers describe this
-  setup, not GEARHEAD in general.
+- One car, one manual set, two small local models (qwen2.5 7B and qwen3 8B). The
+  numbers describe this setup, not GEARHEAD in general.
 - The vague-complaint labels are provisional and the follow-up replies are simulated
   by a model, not collected from owners.
 - Gold page labels come from a model-extracted Fix DB. They passed an automatic
@@ -404,6 +485,7 @@ python -m eval.gate_eval vehicles      # the other-vehicle check on every questi
 python -m eval.gate_eval passing       # the whole gate on 48 questions that mention two vehicles
 python -m eval.gate_eval passing holdout   # the same, on 48 questions written after the which-vehicle check was frozen
 python -m eval.grounding_eval          # hours on a laptop CPU, resumes if stopped
+python -m eval.grounding_eval holdout --tag=split   # 30 answerable questions the main run never used
 python -m eval.report              # writes results/summary.json and results/REPORT.md
 pytest                             # unit tests for the scoring code
 ```

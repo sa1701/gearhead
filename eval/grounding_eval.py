@@ -3,7 +3,9 @@
 Stores the answer next to the exact pages that were in the model's context, so
 report.py can check every citation and every refusal without re-running the model.
 
-Run:  python -m eval.grounding_eval [limit] [--no-fixdb]
+Run:  python -m eval.grounding_eval [limit] [--no-fixdb] [holdout] [--tag=name]
+`holdout` swaps the answerable sample for questions the main run never used.
+`--tag` adds a name to the results file, so two models can be run side by side.
 The retrieval pipeline under test is whatever GEARHEAD_RETRIEVAL selects.
 """
 from __future__ import annotations
@@ -25,11 +27,17 @@ ANSWERABLE_SAMPLE = 30   # generation is slow on a laptop; retrieval uses the fu
 FIXES_IN_CONTEXT = 4     # same number diagnose.build_context asks for
 
 
-def _sample(car: str) -> list[dict]:
+def _sample(car: str, holdout: bool = False) -> list[dict]:
     """A fixed answerable sample plus every unanswerable question, interleaved so
-    a run that is stopped early still covers both kinds."""
+    a run that is stopped early still covers both kinds.
+
+    The held-out sample is drawn from the answerable questions the main sample left out.
+    """
     answerable = load_gold(car, answerable=True)
     picked = random.Random(SEED).sample(answerable, min(ANSWERABLE_SAMPLE, len(answerable)))
+    if holdout:
+        unused = [row for row in answerable if row not in picked]
+        picked = random.Random(SEED).sample(unused, min(ANSWERABLE_SAMPLE, len(unused)))
     mixed = chain.from_iterable(zip_longest(picked, load_gold(car, answerable=False)))
     return [row for row in mixed if row is not None]
 
@@ -43,17 +51,24 @@ def _fix_pages(question: str, car: str) -> list[list]:
     ]
 
 
-def results_name(retrieval: str, use_fixdb: bool) -> str:
-    """One file per pipeline so runs never mix: grounding.jsonl is the expansion baseline."""
-    mode = "" if retrieval == "expand" else f"_{retrieval}"
-    return f"grounding{mode}{'' if use_fixdb else '_nofixdb'}.jsonl"
+def results_name(retrieval: str, use_fixdb: bool, holdout: bool = False, tag: str = "") -> str:
+    """One file per kind of run so runs never mix: grounding.jsonl is the expansion baseline."""
+    parts = [
+        "grounding",
+        "" if retrieval == "expand" else retrieval,
+        "" if use_fixdb else "nofixdb",
+        "holdout" if holdout else "",
+        tag,
+    ]
+    return "_".join(part for part in parts if part) + ".jsonl"
 
 
-def run(limit: int | None = None, use_fixdb: bool = True, car: str = CAR) -> None:
-    out = RESULTS_DIR / results_name(settings.retrieval, use_fixdb)
+def run(limit: int | None = None, use_fixdb: bool = True, holdout: bool = False,
+        tag: str = "", car: str = CAR) -> None:
+    out = RESULTS_DIR / results_name(settings.retrieval, use_fixdb, holdout, tag)
     if not use_fixdb:
         diagnose.search_fixes = lambda *args, **kwargs: []  # ablation: raw excerpts only
-    todo = pending(_sample(car), out)[:limit]
+    todo = pending(_sample(car, holdout), out)[:limit]
     print(f"Grounding eval ({settings.retrieval} retrieval, fix DB {'on' if use_fixdb else 'off'}): "
           f"{len(todo)} to run -> {out}")
 
@@ -80,4 +95,10 @@ def run(limit: int | None = None, use_fixdb: bool = True, car: str = CAR) -> Non
 if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")
     numbers = [a for a in sys.argv[1:] if a.isdigit()]
-    run(limit=int(numbers[0]) if numbers else None, use_fixdb="--no-fixdb" not in sys.argv)
+    tags = [a.split("=", 1)[1] for a in sys.argv[1:] if a.startswith("--tag=")]
+    run(
+        limit=int(numbers[0]) if numbers else None,
+        use_fixdb="--no-fixdb" not in sys.argv,
+        holdout="holdout" in sys.argv,
+        tag=tags[0] if tags else "",
+    )
