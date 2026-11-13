@@ -38,10 +38,40 @@ def read_results(path: Path) -> list[dict]:
     return list(rows.values())
 
 
+def apply_page_corrections(rows: list[dict], corrections: list[dict]) -> list[dict]:
+    """Rows with their gold pages replaced where a page check found the label wrong.
+
+    The gold labels come from a model-extracted Fix DB, so the fixes found by checking
+    pages against the manual are kept in their own file and survive a rebuild.
+    """
+    pages = {c["id"]: c["pages"] for c in corrections}
+    return [{**row, "pages": pages[row["id"]]} if row["id"] in pages else row for row in rows]
+
+
+def rescore_with_corrections(result_rows: list[dict], corrections: list[dict]) -> list[dict]:
+    """Stored answers with their gold pages brought up to date.
+
+    An answer-quality row keeps the gold pages it was run against. When a label is
+    corrected later, the stored answer is still good, only the label it is scored
+    against changes, so nothing has to be run again.
+    """
+    pages = {c["id"]: c["pages"] for c in corrections}
+    return [
+        {**row, "gold": {**row["gold"], "pages": pages[row["id"]]}} if row["id"] in pages and "gold" in row else row
+        for row in result_rows
+    ]
+
+
+def load_page_corrections() -> list[dict]:
+    path = GOLD_DIR / "page-corrections.json"
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
+
+
 def load_gold(car: str = CAR, answerable: bool | None = None) -> list[dict]:
     rows = read_jsonl(GOLD_DIR / f"{car}.jsonl")
     if not rows:
         raise FileNotFoundError(f"No gold set for {car}. Run: python -m eval.build_gold merge")
+    rows = apply_page_corrections(rows, load_page_corrections())
     if answerable is None:
         return rows
     return [r for r in rows if r["answerable"] is answerable]

@@ -1,0 +1,146 @@
+[
+ {
+  "id": "a-3fdd9ac5b2",
+  "pages": [
+   71,
+   72
+  ],
+  "was": [
+   41,
+   50
+  ],
+  "note": "The procedure for this symptom starts on page 71. The old pages are the introduction and the code table."
+ },
+ {
+  "id": "a-0c1839c390",
+  "pages": [
+   70
+  ],
+  "was": [
+   41,
+   50
+  ],
+  "note": "Page 70 is the procedure named after this symptom. The old pages are the introduction and the code table."
+ },
+ {
+  "id": "a-6b4cae7ddf",
+  "pages": [
+   50,
+   51,
+   52
+  ],
+  "was": [
+   42,
+   47
+  ],
+  "note": "The symptom charts on pages 50 to 52 list this symptom. The old pages are a test-mode table and the work flow."
+ },
+ {
+  "id": "a-fbb0dadc05",
+  "pages": [
+   43
+  ],
+  "was": [
+   42
+  ],
+  "note": "Off by one page. Page 43 is the user-mode chart. Page 42 is the diagnosis-mode chart."
+ },
+ {
+  "id": "a-7af480342c",
+  "pages": [
+   4,
+   13,
+   15
+  ],
+  "was": [
+   13,
+   15
+  ],
+  "note": "Page 4 is the chart that lists this symptom. The old pages are the inspections it points to."
+ },
+ {
+  "id": "a-b8d624fde7",
+  "pages": [
+   4,
+   6,
+   7,
+   10,
+   13,
+   15
+  ],
+  "was": [
+   6,
+   7,
+   10,
+   13,
+   15
+  ],
+  "note": "Page 4 is the chart that lists this symptom. The old pages are the inspections it points to."
+ },
+ {
+  "id": "a-bbfc7ef517",
+  "pages": [
+   73
+  ],
+  "was": [
+   41,
+   49
+  ],
+  "note": "Page 73 is the procedure named after this symptom. The old pages are the introduction and the self-diagnosis steps."
+ },
+ {
+  "id": "a-df01465d17",
+  "pages": [
+   4,
+   6,
+   7,
+   10,
+   13,
+   15
+  ],
+  "was": [
+   6,
+   7,
+   10,
+   13,
+   15
+  ],
+  "note": "Page 4 is the chart that lists this symptom. The old pages are the inspections it points to."
+ },
+ {
+  "id": "a-1381fb1669",
+  "pages": [
+   4,
+   5,
+   6,
+   7,
+   8,
+   10,
+   13,
+   15
+  ],
+  "was": [
+   5,
+   6,
+   7,
+   8,
+   10,
+   13,
+   15
+  ],
+  "note": "Page 4 is the chart that lists this symptom. The old pages are the inspections it points to."
+ },
+ {
+  "id": "a-56b60e4d96",
+  "pages": [
+   4,
+   6,
+   7
+  ],
+  "was": [
+   6,
+   7
+  ],
+  "note": "Page 4 is the chart that lists this symptom. The old pages are the inspections it points to."
+ }
+]

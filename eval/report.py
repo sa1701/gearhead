@@ -18,7 +18,7 @@ from .metrics import (
     parse_citations,
     wilson_interval,
 )
-from .store import RESULTS_DIR, read_results
+from .store import RESULTS_DIR, load_page_corrections, read_results, rescore_with_corrections
 
 KS = (1, 3, 6, 20)          # the one-shot diagnosis passes 6 chunks, the interview 20
 CONFIGS = ("raw", "expanded", "manual", "rerank")
@@ -420,7 +420,7 @@ def build_summary() -> dict:
     if retrieval_rows:
         summary["retrieval"] = retrieval_summary(retrieval_rows)
     for name, _ in GROUNDING_RUNS:
-        rows = read_results(RESULTS_DIR / f"{name}.jsonl")
+        rows = rescore_with_corrections(read_results(RESULTS_DIR / f"{name}.jsonl"), load_page_corrections())
         if rows:
             summary[name] = grounding_summary(rows)
     followup = followup_summary(read_results(RESULTS_DIR / "gate_followup.jsonl"))
