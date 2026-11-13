@@ -1,0 +1,122 @@
+[
+ {
+  "question": "The blind spot warning light in the door mirror stays on all the time. How do I test the blind spot sensors?",
+  "why": "feature not on this car"
+ },
+ {
+  "question": "The wireless charging pad in the centre console will not charge my phone. How do I check it?",
+  "why": "feature not on this car"
+ },
+ {
+  "question": "The electric parking brake will not release. How do I release it by hand?",
+  "why": "feature not on this car"
+ },
+ {
+  "question": "The power tailgate stops halfway when I press the button. How do I reset the tailgate motor?",
+  "why": "feature not on this car"
+ },
+ {
+  "question": "The automatic high beam assist no longer dips for oncoming cars. How do I recalibrate it?",
+  "why": "feature not on this car"
+ },
+ {
+  "question": "The around view monitor shows a distorted picture from the side cameras. How do I calibrate the cameras?",
+  "why": "feature not on this car"
+ },
+ {
+  "question": "Android Auto will not start when I plug my phone in. How do I fix it?",
+  "why": "feature not on this car"
+ },
+ {
+  "question": "An over-the-air software update failed and the infotainment screen is stuck. How do I restart the update?",
+  "why": "feature not on this car"
+ },
+ {
+  "question": "The ventilated seats have stopped blowing cool air. Where is the seat fan?",
+  "why": "feature not on this car"
+ },
+ {
+  "question": "The heated steering wheel does not warm up. Which fuse or relay does it use?",
+  "why": "feature not on this car"
+ },
+ {
+  "question": "The electric power steering warning light is on and the wheel is heavy. How do I reset the electric power steering motor?",
+  "why": "feature not on this car"
+ },
+ {
+  "question": "The driver attention alert keeps telling me to take a break. How do I reset it?",
+  "why": "feature not on this car"
+ },
+ {
+  "question": "The traffic sign recognition shows the wrong speed limit on the dash. How do I recalibrate it?",
+  "why": "feature not on this car"
+ },
+ {
+  "question": "The mild hybrid system warning is on. How do I test the starter generator?",
+  "why": "feature not on this car"
+ },
+ {
+  "question": "The charging port flap will not open on my plug-in Patrol. How do I release it?",
+  "why": "feature not on this car"
+ },
+ {
+  "question": "The automatic park assist will not steer into a parking space any more. How do I diagnose it?",
+  "why": "feature not on this car"
+ },
+ {
+  "question": "Remote start from the phone app has stopped working. How do I reconnect the car to the app?",
+  "why": "feature not on this car"
+ },
+ {
+  "question": "The dual-clutch gearbox shudders when pulling away. What is the clutch relearn procedure?",
+  "why": "feature not on this car"
+ },
+ {
+  "question": "The memory seat does not go back to my saved position. How do I reprogram the seat memory?",
+  "why": "feature not on this car"
+ },
+ {
+  "question": "The power folding mirrors do not fold in when I lock the car. How do I test the folding motor?",
+  "why": "feature not on this car"
+ },
+ {
+  "question": "The trailer sway control warning comes on when I tow. How do I check the system?",
+  "why": "feature not on this car"
+ },
+ {
+  "question": "What is the injector torque for the 3.2 litre engine in a Ford Ranger?",
+  "why": "different vehicle"
+ },
+ {
+  "question": "How often should the timing belt be changed on a Mitsubishi Triton?",
+  "why": "different vehicle"
+ },
+ {
+  "question": "What is the injector coding procedure for the 1KD engine in a Toyota Hilux?",
+  "why": "different vehicle"
+ },
+ {
+  "question": "The timing chain rattles on my Nissan Navara D40. How do I replace it?",
+  "why": "different vehicle"
+ },
+ {
+  "question": "My Jeep Wrangler has a violent steering shake at 80 km/h. How do I fix it?",
+  "why": "different vehicle"
+ },
+ {
+  "question": "Is it legal to fit a 3 inch lift kit to my Patrol without an engineering certificate?",
+  "why": "not manual content"
+ },
+ {
+  "question": "Which brand of bull bar is the strongest for my Patrol?",
+  "why": "not manual content"
+ },
+ {
+  "question": "How much should a mechanic charge in labour to replace the clutch on my Patrol?",
+  "why": "not manual content"
+ },
+ {
+  "question": "What does a roadworthy inspection cost for a 2005 Patrol?",
+  "why": "not manual content"
+ }
+]

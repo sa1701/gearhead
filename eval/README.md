@@ -373,82 +373,122 @@ A phrase match alone would have counted it as a refusal.
 
 The first run used the starting pipeline (query expansion, no rerank, and the gate
 declined nothing) on the CPU. The other two used the current pipeline (rerank plus the
-coverage gate) on the GPU, once with each local model. Each run is about 30 answerable
-and 30 unanswerable questions.
+coverage gate) on the GPU, once with each local model. Each run is 30 answerable and
+30 unanswerable questions. Page results use the corrected labels (see the label check
+below).
 
 | Measure | Starting pipeline, qwen2.5 7B | Current pipeline, qwen2.5 7B | Current pipeline, qwen3 8B |
 |---|---|---|---|
-| Unanswerable: refused | 16% (5 of 31) | 93% (28 of 30) | 87% (26 of 30) |
-| Unanswerable: hedged | 26% (8 of 31) | 3% (1 of 30) | 7% (2 of 30) |
-| Unanswerable: answered | 58% (18 of 31) | 3% (1 of 30) | 7% (2 of 30) |
-| Answerable: refused anyway | 0% (0 of 31) | 7% (2 of 30) | 7% (2 of 30) |
-| Correct page among the retrieved chunks | 42% | 63% | 63% |
-| Correct page in context | 81% | 80% | 80% |
-| Answer cites the correct page | 45% | 43% | 70% |
-| Attempts that cite any page | 81% | 71% | 93% |
-| Citations that point to a retrieved page | 97% (of 126) | 98% (of 81) | 100% (of 281) |
-| Median seconds per answer | 215 (CPU) | 20 (GPU) | 35 (GPU) |
+| Unanswerable: refused | 17% (5 of 30) | 93% (28 of 30) | 87% (26 of 30) |
+| Unanswerable: hedged | 27% (8 of 30) | 3% (1 of 30) | 7% (2 of 30) |
+| Unanswerable: answered | 57% (17 of 30) | 3% (1 of 30) | 7% (2 of 30) |
+| Answerable: refused anyway | 0% (0 of 30) | 7% (2 of 30) | 7% (2 of 30) |
+| Correct page in context | 87% (26 of 30) | 80% (24 of 30) | 77% (23 of 30) |
+| Answer cites the correct page | 47% (14 of 30) | 43% (13 of 30) | 63% (19 of 30) |
+| Attempts that cite any page | 80% | 71% | 93% |
+| Citations that point to a retrieved page | 97% (of 123) | 98% (of 81) | 100% (of 281) |
+| Median seconds per answer | 212 (CPU) | 20 (GPU) | 35 (GPU) |
 
 What this shows:
 
-- **The gate fixed the refusals.** The starting pipeline gave repair steps for 84% of
-  the questions the manual does not cover. The current one does that for 7% with
-  qwen2.5. The cost is 2 of 30 answerable questions refused.
+- **The gate fixed the refusals on these questions.** The starting pipeline gave
+  repair steps for 83% of the questions the manual does not cover. The current one
+  does that for 7% with qwen2.5. The cost is 2 of 30 answerable questions refused.
+  These 30 unanswerable questions were also used to tune the gate, so this is the
+  flattering number. The held-out test below is the honest one.
 - **The gate did not fix the answers.** With qwen2.5 the answer cites the correct page
-  43% of the time, the same as before, even though that page is in context 80% of the
-  time.
-- **qwen3 8B cites much better.** 70% against 43% on the same questions with the same
-  retrieved pages. It also cites more pages per answer (281 citations against 81).
-- **qwen3 8B is not clearly worse at refusing.** 26 of 30 against 28 of 30 is a gap of
-  two questions, and the ranges overlap. The gate declined 28 questions before any
-  answer was written with qwen3 and 29 with qwen2.5, because the gate's own checks
-  also call the model.
+  43% of the time, about the same as before, even though that page is in context 80%
+  of the time.
+- **qwen3 8B cites better.** 63% against 43% on the same questions. It also cites more
+  pages per answer (281 citations against 81).
 - **qwen3 8B is slower and runs the card hot.** 35 seconds against 20, and the GPU
   averaged 85 C with a peak of 90 C over the run.
 
-The two models were compared on the same 60 questions and this is one run each, so it
-is a first reading and not a held-out result. The next section is the held-out test.
-
-### One model for the gate, another for the answer
+### The held-out test: one model for the gate, another for the answer
 
 The three runs pointed at a split: qwen2.5 for the gate's short checks and qwen3 for the
-answer. `GEARHEAD_OLLAMA_GATE_MODEL` sets a separate gate model. To test the split,
-30 answerable questions were drawn that the earlier runs never used
-(`python -m eval.grounding_eval holdout`). There are only 30 unanswerable questions, so
-those are the same ones as before. Both setups ran on the same 60 questions, on the GPU,
-on the same day.
+answer. `GEARHEAD_OLLAMA_GATE_MODEL` sets a separate gate model.
+
+The held-out set is 60 questions none of the earlier runs used
+(`python -m eval.grounding_eval holdout`):
+
+- 30 answerable questions drawn from the 82 the first sample left out.
+- 30 new unanswerable questions in `gold/unanswerable-holdout.json`, written after the
+  gate and both models were chosen: 21 features this car does not have, 5 other
+  vehicles and 4 questions no workshop manual answers. The key terms were checked
+  against the indexed manual text.
+
+Both setups ran on the same 60 questions, on the GPU, on the same day.
 
 | Measure | qwen2.5 for both | qwen2.5 gate, qwen3 answer |
 |---|---|---|
-| Answer cites the correct page | 50% (15 of 30) | 80% (24 of 30) |
+| Answer cites the correct page | 47% (14 of 30) | 80% (24 of 30) |
 | Correct page in context | 87% (26 of 30) | 83% (25 of 30) |
 | Attempts that cite any page | 62% (18 of 29) | 96% (27 of 28) |
 | Attempts with a citation to a page it was not given | 10% (3 of 29) | 0% (0 of 28) |
-| Unanswerable: refused | 93% (28 of 30) | 90% (27 of 30) |
-| Unanswerable: hedged | 0% (0 of 30) | 3% (1 of 30) |
-| Unanswerable: answered | 7% (2 of 30) | 7% (2 of 30) |
+| Unanswerable: refused | 70% (21 of 30) | 70% (21 of 30) |
+| Unanswerable: hedged | 7% (2 of 30) | 0% (0 of 30) |
+| Unanswerable: answered | 23% (7 of 30) | 30% (9 of 30) |
 | Answerable: refused anyway | 3% (1 of 30) | 7% (2 of 30) |
-| Median seconds per answer | 40 | 59 |
+| Median seconds per answer | 49 | 66 |
 
 What this shows:
 
-- **The citing gain held on new questions.** 80% against 50% on questions neither model
-  had been compared on. The 95% ranges are 63% to 91% and 33% to 67%, so they only
-  just overlap with 30 questions each.
-- **Refusals stayed about the same.** The gate declined 29 questions in both runs. It
-  is the same gate model in both, yet it disagreed with itself on two questions,
-  because the subject check is sampled. That is run-to-run noise, not a model effect.
-- **The split is slower.** 59 seconds against 40. The two models do not fit on an 8 GB
+- **The citing gain held on new questions.** 80% against 47%. The 95% ranges are 63%
+  to 91% and 30% to 64%, so they only just overlap with 30 questions each.
+- **Refusals did not hold.** On new unanswerable questions both setups gave repair
+  steps for 9 of 30 (30%). On the first 30 it was 2 or 3 of 30. The gate was tuned on
+  the first 30, and that number flattered it.
+- **The gate is the weak point, not the answer model.** It stopped 20 of the 30 new
+  questions. Of the 10 it let through, each model refused only one. Once a question is
+  through the gate, both models answer it.
+- **What gets through.** A feature this car lacks that sounds like a part it has:
+  electric parking brake, electric power steering, power tailgate, heated steering
+  wheel, folding mirrors, a dual-clutch gearbox. The manual has pages on parking
+  brakes, power steering and mirrors, so the page match is strong and the subject
+  check finds the part.
+- **The split is slower.** 66 seconds against 49. The two models do not fit on an 8 GB
   card together, so they swap in and out.
-- **The laptop is the limit.** The card averaged 86 C and peaked at 91 C, and the
-  machine ran critically low on memory during the second run.
+- **The laptop is the limit.** The card averaged 86 C and peaked at 91 C on a
+  60-answer run, and the machine ran critically low on memory twice.
 
 The default is unchanged: one model, qwen2.5 7B. The split is switched on with
 `GEARHEAD_OLLAMA_MODEL=qwen3:8b` and `GEARHEAD_OLLAMA_GATE_MODEL=qwen2.5:7b-instruct`.
 
-These two runs used Ollama 0.40.16 and the three runs above used 0.20.4. qwen2.5 took
-40 seconds per answer here against 20 there, so do not compare speed across the two
+The held-out runs used Ollama 0.40.16 and the three runs above used 0.20.4. qwen2.5 took
+49 seconds per answer here against 20 there, so do not compare speed across the two
 tables.
+
+The first held-out attempt reused the original 30 unanswerable questions. On those the
+two setups refused 28 and 27 of 30, which is what showed the set had stopped being a
+fair test.
+
+### The label check
+
+The gold pages come from a model-extracted Fix DB. For the 60 answerable questions in
+the two samples above, the text of each gold page was read against the symptom.
+
+| Result | Questions |
+|---|---|
+| Label correct | 50 of 60 |
+| Left out the chart page that lists the symptom | 5 |
+| Off by one page | 1 |
+| Wrong pages | 4 |
+
+The four wrong labels pointed at an introduction page or a code table instead of the
+procedure named after the symptom. All ten are corrected in `gold/page-corrections.json`,
+which is applied when the gold set is read. Stored answers are scored against the
+corrected pages without running the model again.
+
+The effect on the tables above: on the first sample qwen3's "cites the correct page"
+fell from 70% to 63%, because two answers had been credited for citing a wrong gold
+page. qwen2.5 did not change. On the held-out sample qwen2.5 fell from 50% to 47% and
+the split did not change.
+
+The check was done by reading page text, not by a mechanic, and the other 52
+answerable questions are unchecked. At the rate found here, about 1 in 6 of those
+labels is wrong or incomplete. The retrieval results earlier in this file were scored
+before the corrections.
 
 ## Limits
 
@@ -457,7 +497,8 @@ tables.
 - The vague-complaint labels are provisional and the follow-up replies are simulated
   by a model, not collected from owners.
 - Gold page labels come from a model-extracted Fix DB. They passed an automatic
-  word-overlap check, and a hand check of 30 is still to do.
+  word-overlap check. 60 of the 112 were then read against the page text, and 10 were
+  corrected (see the label check).
 - Faults often span neighbouring pages. Counting a hit within one page either side
   raises page@6 from 59% to 67%.
 - Query expansion is sampled at temperature 0.3 and was run once.
@@ -485,7 +526,7 @@ python -m eval.gate_eval vehicles      # the other-vehicle check on every questi
 python -m eval.gate_eval passing       # the whole gate on 48 questions that mention two vehicles
 python -m eval.gate_eval passing holdout   # the same, on 48 questions written after the which-vehicle check was frozen
 python -m eval.grounding_eval          # hours on a laptop CPU, resumes if stopped
-python -m eval.grounding_eval holdout --tag=split   # 30 answerable questions the main run never used
+python -m eval.grounding_eval holdout --tag=split   # 60 questions the main run never used
 python -m eval.report              # writes results/summary.json and results/REPORT.md
 pytest                             # unit tests for the scoring code
 ```
