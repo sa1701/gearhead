@@ -40,6 +40,8 @@ class Settings:
     # Manual chunks the interview reasons over. Unset = pick by brain (see interview_chunk_count).
     interview_chunks: str | None = os.getenv("GEARHEAD_INTERVIEW_CHUNKS")
 
+    sentry_dsn: str = os.getenv("SENTRY_DSN", "")
+
     manuals_dir: Path = PROJECT_ROOT / "manuals"
     chroma_dir: Path = PROJECT_ROOT / "chroma_db"
     images_dir: Path = PROJECT_ROOT / "page_images"
