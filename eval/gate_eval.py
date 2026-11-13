@@ -16,7 +16,7 @@ from __future__ import annotations
 import json
 import sys
 
-from src.ai import get_provider
+from src.ai import get_gate_provider, get_provider
 from src.brain.diagnose import _retrieve
 from src.brain.gate import manual_covers
 from src.brain.subject import name_subject, subject_score
@@ -111,7 +111,7 @@ def run_subject(car: str = CAR, holdout: bool = False) -> None:
     todo = pending(load_holdout(car) if holdout else _tuning_questions(car), out)
     print(f"Subject check eval (threshold {settings.gate_subject_min_score}): "
           f"{len(todo)} questions -> {out}")
-    brain = get_provider()
+    brain = get_gate_provider(get_provider())
 
     for i, row in enumerate(todo, 1):
         hits, _ = _retrieve(row["question"], car, brain=None, final=ONE_SHOT_CHUNKS)
@@ -181,7 +181,7 @@ def run_passing(car: str = CAR, holdout: bool = False) -> None:
     out = OUT_PASSING_HOLDOUT if holdout else OUT_PASSING
     todo = pending(questions, out)
     print(f"Two-vehicle eval: {len(todo)} questions -> {out}")
-    brain = get_provider()
+    brain = get_gate_provider(get_provider())
 
     for i, row in enumerate(todo, 1):
         named = other_vehicle_named(row["question"], car)
