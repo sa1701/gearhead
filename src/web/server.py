@@ -8,6 +8,7 @@ from __future__ import annotations
 import uuid
 from pathlib import Path
 
+import sentry_sdk
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -16,6 +17,13 @@ from pydantic import BaseModel
 from ..brain.interview import DiagnosisSession
 from ..config import settings
 from ..library.images import illustrate
+
+if settings.sentry_dsn:
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        send_default_pii=True,
+        traces_sample_rate=1.0,
+    )
 
 app = FastAPI(title="GEARHEAD")
 

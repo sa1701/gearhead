@@ -6,3 +6,4 @@ chromadb>=0.5          # local search database (the Library)
 fastapi>=0.115         # the web app body
 uvicorn>=0.30          # runs the local web server
 flashrank>=0.2         # local reranker (small ONNX cross-encoder, CPU only)
+sentry-sdk[fastapi]>=2.0  # error tracking + tracing
