@@ -47,6 +47,18 @@ def load_gold(car: str = CAR, answerable: bool | None = None) -> list[dict]:
     return [r for r in rows if r["answerable"] is answerable]
 
 
+def load_unanswerable_holdout() -> list[dict]:
+    """Unanswerable questions written after every gate and prompt choice so far, and
+    never used to make one."""
+    path = GOLD_DIR / "unanswerable-holdout.json"
+    if not path.exists():
+        return []
+    return [
+        {"id": f"uh-{i:02d}", "answerable": False, "question": u["question"], "why": u["why"]}
+        for i, u in enumerate(json.loads(path.read_text(encoding="utf-8")), 1)
+    ]
+
+
 def load_vague(car: str = CAR) -> list[dict]:
     """Vague owner complaints, labelled with the manual sections that could hold the answer."""
     return read_jsonl(GOLD_DIR / f"vague-{car}.jsonl")

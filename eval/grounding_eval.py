@@ -4,7 +4,7 @@ Stores the answer next to the exact pages that were in the model's context, so
 report.py can check every citation and every refusal without re-running the model.
 
 Run:  python -m eval.grounding_eval [limit] [--no-fixdb] [holdout] [--tag=name]
-`holdout` swaps the answerable sample for questions the main run never used.
+`holdout` swaps both kinds of question for ones the main run never used.
 `--tag` adds a name to the results file, so two models can be run side by side.
 The retrieval pipeline under test is whatever GEARHEAD_RETRIEVAL selects.
 """
@@ -20,7 +20,7 @@ from src.config import settings
 from src.library.fixdb import search_fixes
 from src.library.ingest import SECTION_NAMES
 
-from .store import CAR, RESULTS_DIR, append_jsonl, load_gold, pending
+from .store import CAR, RESULTS_DIR, append_jsonl, load_gold, load_unanswerable_holdout, pending
 
 SEED = 316
 ANSWERABLE_SAMPLE = 30   # generation is slow on a laptop; retrieval uses the full set
@@ -31,14 +31,17 @@ def _sample(car: str, holdout: bool = False) -> list[dict]:
     """A fixed answerable sample plus every unanswerable question, interleaved so
     a run that is stopped early still covers both kinds.
 
-    The held-out sample is drawn from the answerable questions the main sample left out.
+    The held-out sample is drawn from the answerable questions the main sample left
+    out, with the held-out unanswerable questions.
     """
     answerable = load_gold(car, answerable=True)
     picked = random.Random(SEED).sample(answerable, min(ANSWERABLE_SAMPLE, len(answerable)))
+    unanswerable = load_gold(car, answerable=False)
     if holdout:
         unused = [row for row in answerable if row not in picked]
         picked = random.Random(SEED).sample(unused, min(ANSWERABLE_SAMPLE, len(unused)))
-    mixed = chain.from_iterable(zip_longest(picked, load_gold(car, answerable=False)))
+        unanswerable = load_unanswerable_holdout()
+    mixed = chain.from_iterable(zip_longest(picked, unanswerable))
     return [row for row in mixed if row is not None]
 
 

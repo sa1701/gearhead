@@ -32,10 +32,20 @@ def test_the_held_out_sample_is_the_same_every_run(monkeypatch):
     assert _sample("car", holdout=True) == _sample("car", holdout=True)
 
 
-def test_the_held_out_sample_keeps_every_unanswerable_question(monkeypatch):
+def test_the_held_out_sample_uses_only_the_held_out_unanswerable_questions(monkeypatch):
+    _gold(monkeypatch, unanswerable=5)
+    held_out = [{"id": f"uh-{i}", "answerable": False} for i in range(3)]
+    monkeypatch.setattr(grounding_eval, "load_unanswerable_holdout", lambda: held_out)
+
+    unanswerable = [r for r in _sample("car", holdout=True) if not r["answerable"]]
+
+    assert unanswerable == held_out
+
+
+def test_the_main_sample_keeps_the_original_unanswerable_questions(monkeypatch):
     _gold(monkeypatch, unanswerable=5)
 
-    assert sum(not r["answerable"] for r in _sample("car", holdout=True)) == 5
+    assert {r["id"] for r in _sample("car") if not r["answerable"]} == {f"u-{i}" for i in range(5)}
 
 
 def test_each_kind_of_run_writes_its_own_file():
